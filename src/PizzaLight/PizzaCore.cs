@@ -215,6 +215,7 @@ namespace PizzaLight
                 _logger.Error($"Unable to find channel for message '{responseMessage.Text}'. Message not sent");
             }
         }
+
         //private IList<SlackAttachment> GetAttachments(List<Attachment> attachments)
         //{
         //    var slackAttachments = new List<SlackAttachment>();

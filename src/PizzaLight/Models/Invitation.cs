@@ -1,6 +1,8 @@
 ﻿using System;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 
-namespace PizzaLight.Resources
+namespace PizzaLight.Models
 {
     public class Invitation
     {
@@ -9,6 +11,14 @@ namespace PizzaLight.Resources
         public string UserName { get; set; }
         public string UserId { get; set; }
         public bool Invited { get; set; }
-        public bool Accepted { get; set; }
+        [JsonConverter(typeof(StringEnumConverter))]
+        public Invitation.ResponseEnum Response { get; set; }
+
+        public enum ResponseEnum
+        {
+            NoResponse,
+            Accepted,
+            Rejected
+        }
     }
 }

@@ -32,10 +32,6 @@ namespace PizzaLight.Resources
             return Task.CompletedTask;
         }
 
-        public async Task HandleMessage(IncomingMessage incomingMessage)
-        {
-        }
-
         public T[] ReadFile<T>(string fileName) where T : class, new()
         {
             string filePath = GetFilePath(fileName);
