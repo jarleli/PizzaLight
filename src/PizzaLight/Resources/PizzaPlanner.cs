@@ -21,6 +21,8 @@ namespace PizzaLight.Resources
         private PizzaCore _core;
         private List<PizzaPlan> _acitveplans;
 
+        public List<PizzaPlan> PizzaPlans => _acitveplans;
+
         public PizzaPlanner(ILogger logger, BotConfig config, JsonStorage storage, PizzaInviter pizzaInviter, PizzaCore core)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -180,7 +182,7 @@ namespace PizzaLight.Resources
         private async Task LockParticipants(string id)
         {
             var pizzaEvent = _acitveplans.Single(e => e.Id == id);
-            pizzaEvent.ParticipatntsLocked = true;
+            pizzaEvent.ParticipantsLocked = true;
             var day = pizzaEvent.TimeOfEvent.LocalDateTime.ToString("dddd, MMMM dd");
             var time = pizzaEvent.TimeOfEvent.LocalDateTime.ToString("HH:mm");
             var participantlist = string.Join(",", pizzaEvent.Accepted.Select(a=>$"@{a.UserName}"));
@@ -220,5 +222,6 @@ namespace PizzaLight.Resources
                 }
             }
         }
+
     }
 }

@@ -1,27 +1,32 @@
-﻿using System.Reflection;
+﻿using System;
+using System.Reflection;
 using Microsoft.AspNetCore.Mvc;
+using PizzaLight.Resources;
 
 namespace PizzaLight.Controllers
 {
-    [Route("api")]
     [Route("")]
+    [Route("api")]
     public class ApiController: Controller
     {
-        //private readonly PizzaCore _core;
+        private readonly PizzaCore _core;
+        private readonly PizzaPlanner _planner;
 
-        public ApiController()
+        public ApiController(PizzaCore core, PizzaPlanner planner)
         {
+            _core = core ?? throw new ArgumentNullException(nameof(core)); ;
+            _planner = planner ?? throw new ArgumentNullException(nameof(planner)); ;
         }
 
         [HttpGet]
         public IActionResult Get()
         {
-            //var connection = _core.SlackConnection.IsConnected;
             return Ok(new
             {
-                application = "slack bot",
+                application = "pizzalight",
                 version = Assembly.GetCallingAssembly().GetName().Version.ToString(),
-                //activeConnection = connection
+                activeConnection = _core.SlackConnection?.IsConnected ?? false,
+                ActivePlans = _planner.PizzaPlans
             });
         }
     }
