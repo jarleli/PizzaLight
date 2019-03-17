@@ -173,9 +173,14 @@ namespace PizzaLight.Resources
                     UserId = i.UserId,
                     UserName = i.UserName,
                     EventTime = pizzaPlan.TimeOfEvent
-                });
-                await _pizzaInviter.Invite(inviteList);
+                }).ToList();
+                if (!inviteList.Any())
+                {
+                    _logger.Information("Found no more eligible users to invite to event.");
+                    return;
+                }
 
+                await _pizzaInviter.Invite(inviteList);
                 pizzaPlan.Invited.AddRange(newGuests);
                 _storage.SaveFile(ACTIVEEVENTSFILE, _acitveplans.ToArray());
             }

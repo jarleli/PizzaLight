@@ -10,9 +10,11 @@ namespace PizzaLight.Models
         public DateTimeOffset EventTime { get; set; }
         public string UserName { get; set; }
         public string UserId { get; set; }
-        public bool Invited { get; set; }
+        public DateTimeOffset? Invited { get; set; }
         [JsonConverter(typeof(StringEnumConverter))]
         public Invitation.ResponseEnum Response { get; set; }
+
+        public DateTimeOffset? Reminded { get; set; }
 
         public enum ResponseEnum
         {

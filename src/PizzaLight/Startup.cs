@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -33,6 +34,9 @@ namespace PizzaLight
             services.AddSingleton<IPizzaInviter, PizzaInviter>();
             services.AddSingleton<IPizzaCore, PizzaCore>();
             services.AddSingleton<PizzaServiceHost>();
+
+            var cts = new CancellationTokenSource();
+            services.AddSingleton(cts);
         }
 
         public void Configure(IApplicationBuilder app, IApplicationLifetime applicationLifetime, IHostingEnvironment env)
