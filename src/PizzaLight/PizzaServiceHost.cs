@@ -9,13 +9,13 @@ namespace PizzaLight
 {
     public class PizzaServiceHost
     {
-        private readonly PizzaInviter _inviter;
+        private readonly IPizzaInviter _inviter;
         private readonly PizzaPlanner _planner;
         private readonly ILogger _logger;
-        private readonly PizzaCore _pizzaCore;
+        private readonly IPizzaCore _pizzaCore;
         private List<IMustBeInitialized> _resources;
 
-        public PizzaServiceHost(ILogger logger, PizzaCore pizzaCore, PizzaInviter inviter, PizzaPlanner planner)
+        public PizzaServiceHost(ILogger logger, IPizzaCore pizzaCore, IPizzaInviter inviter, PizzaPlanner planner)
         {
             if (inviter == null) throw new ArgumentNullException(nameof(inviter));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));

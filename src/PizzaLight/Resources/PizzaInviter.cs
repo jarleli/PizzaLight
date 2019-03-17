@@ -10,17 +10,17 @@ using Serilog;
 
 namespace PizzaLight.Resources
 {
-    public class PizzaInviter : IMessageHandler, IMustBeInitialized
+    public class PizzaInviter : IPizzaInviter
     {
         private readonly ILogger _logger;
-        private readonly JsonStorage _storage;
-        private PizzaCore _core;
+        private readonly IFileStorage _storage;
+        private IPizzaCore _core;
         private List<Invitation> _activeInvitations;
 
         private const string INVITESFILE = "active invites";
 
 
-        public PizzaInviter(ILogger logger, JsonStorage storage, PizzaCore core)
+        public PizzaInviter(ILogger logger, IFileStorage storage, IPizzaCore core)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _storage = storage ?? throw new ArgumentNullException(nameof(storage));
@@ -58,7 +58,7 @@ namespace PizzaLight.Resources
             while (_activeInvitations.Any(i => i.Invited == false))
             {
                 var toInvite = _activeInvitations.First(i => i.Invited == false);
-                var user = _core.SlackConnection.UserCache.Values.SingleOrDefault(u => u.Name == toInvite.UserName);
+                var user = _core.UserCache.Values.SingleOrDefault(u => u.Name == toInvite.UserName);
                 if (user != null)
                 {
                     var day = toInvite.EventTime.LocalDateTime.ToString("dddd, MMMM dd");

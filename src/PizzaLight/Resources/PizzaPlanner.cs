@@ -14,16 +14,16 @@ namespace PizzaLight.Resources
     {
         string ACTIVEEVENTSFILE = "active plans";
         private readonly ILogger _logger;
-        private readonly JsonStorage _storage;
-        private readonly PizzaInviter _pizzaInviter;
+        private readonly IFileStorage _storage;
+        private readonly IPizzaInviter _pizzaInviter;
         private readonly BotConfig _config;
 
-        private PizzaCore _core;
+        private IPizzaCore _core;
         private List<PizzaPlan> _acitveplans;
 
         public List<PizzaPlan> PizzaPlans => _acitveplans;
 
-        public PizzaPlanner(ILogger logger, BotConfig config, JsonStorage storage, PizzaInviter pizzaInviter, PizzaCore core)
+        public PizzaPlanner(ILogger logger, BotConfig config, IFileStorage storage, IPizzaInviter pizzaInviter, IPizzaCore core)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _storage = storage ?? throw new ArgumentNullException(nameof(storage));
@@ -66,7 +66,7 @@ namespace PizzaLight.Resources
             _logger.Information("Creating new event...");
             
             var eventId = Guid.NewGuid().ToString();
-            var timeOfEvent = GetDayOfNextEvent().AddHours(17);
+            var timeOfEvent = GetTimeOfNextEvent();
             var toInvite = GetPeopleToInvite(_config.RoomToInviteFrom, _config.InvitesPerEvent, new List<Person>());
 
             var newPlan = new PizzaPlan()
@@ -88,7 +88,7 @@ namespace PizzaLight.Resources
             _storage.SaveFile(ACTIVEEVENTSFILE, _acitveplans.ToArray());
         }
 
-        private List<Person> GetPeopleToInvite(string channelName, int targetGuestCount, IEnumerable<Person> ignoreUsers)
+        public List<Person> GetPeopleToInvite(string channelName, int targetGuestCount, IEnumerable<Person> ignoreUsers)
         {
             var channel = _core.SlackConnection.ConnectedHubs.Values.SingleOrDefault(r => r.Name == $"#{channelName}");
             if (channel == null)
@@ -96,7 +96,7 @@ namespace PizzaLight.Resources
                 _logger.Warning("No such room: ", channelName);
                 return new List<Person>();
             }
-            var inviteCandidates = _core.SlackConnection.UserCache.Values.Where(u => channel.Members.Contains(u.Id)).Where(m => !m.IsBot).ToList();
+            var inviteCandidates = _core.UserCache.Values.Where(u => channel.Members.Contains(u.Id)).Where(m => !m.IsBot).ToList();
             inviteCandidates = inviteCandidates.Where(c => ignoreUsers.All(u => u.UserName != c.Name)).ToList();
 
             var random = new Random();
@@ -114,14 +114,16 @@ namespace PizzaLight.Resources
             return inviteList;
         }
 
-        private DateTimeOffset GetDayOfNextEvent()
+        public DateTimeOffset GetTimeOfNextEvent()
         {
-            //onsdag i uken etter neste
+            //onsdag i uken etter neste - todo 
             var today = DateTimeOffset.UtcNow;
             var targetDay = today
                 .AddDays(- (int) today.DayOfWeek + 3)
                 .AddDays(14);
-            return targetDay.Date;
+
+            //at 17:00 
+            return targetDay.Date.AddHours(17);
         }
 
         private async Task InvitationChanged(Invitation invitation)

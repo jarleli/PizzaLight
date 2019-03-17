@@ -7,7 +7,7 @@ using Serilog;
 
 namespace PizzaLight.Resources
 {
-    public class JsonStorage : IMustBeInitialized
+    public class JsonStorage : IFileStorage
     {
         private readonly ILogger _log;
         private string _directory;

@@ -28,10 +28,10 @@ namespace PizzaLight
         {
             services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_1);
             services.AddSingleton(Configuration.GetSection("Bot").Get<BotConfig>());
-            services.AddSingleton<JsonStorage>();
+            services.AddSingleton<IFileStorage, JsonStorage>();
             services.AddSingleton<PizzaPlanner>();
-            services.AddSingleton<PizzaInviter>();
-            services.AddSingleton<PizzaCore>();
+            services.AddSingleton<IPizzaInviter, PizzaInviter>();
+            services.AddSingleton<IPizzaCore, PizzaCore>();
             services.AddSingleton<PizzaServiceHost>();
         }
 
@@ -48,6 +48,7 @@ namespace PizzaLight
                 await context.Response.WriteAsync(message);
             });
 
+            var core = app.ApplicationServices.GetService<PizzaCore>();
             var host = app.ApplicationServices.GetService<PizzaServiceHost>();
 
             applicationLifetime.ApplicationStarted.Register(async () => await host.Start());

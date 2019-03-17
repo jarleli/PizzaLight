@@ -15,7 +15,7 @@ using StructureMap.TypeRules;
 
 namespace PizzaLight
 {
-    public class PizzaCore
+    public class PizzaCore : IPizzaCore
     {
         private readonly BotConfig _botConfig;
         private readonly Serilog.ILogger _logger;
@@ -25,6 +25,8 @@ namespace PizzaLight
         /// Can be null if disconnected. Should wait for reconnection.
         /// </summary>
         public ISlackConnection SlackConnection { get; private set; }
+
+        public IReadOnlyDictionary<string, SlackUser> UserCache => SlackConnection.UserCache;
 
         public PizzaCore(BotConfig botConfig, ILogger logger)
         {
@@ -96,7 +98,7 @@ namespace PizzaLight
             return Task.CompletedTask;
         }
 
-        public void Disconnect()
+        private void Disconnect()
         {
             _isDisconnecting = true;
 
@@ -263,7 +265,7 @@ namespace PizzaLight
 
         private string GetUsername(SlackMessage message)
         {
-            return SlackConnection.UserCache.ContainsKey(message.User.Id) ? SlackConnection.UserCache[message.User.Id].Name : string.Empty;
+            return UserCache.ContainsKey(message.User.Id) ? UserCache[message.User.Id].Name : string.Empty;
         }
         private async Task<string> GetUserChannel(SlackMessage message)
         {
@@ -297,9 +299,9 @@ namespace PizzaLight
         {
             SlackChatHub chatHub = null;
 
-            if (SlackConnection.UserCache.ContainsKey(userId))
+            if (UserCache.ContainsKey(userId))
             {
-                string username = "@" + SlackConnection.UserCache[userId].Name;
+                string username = "@" + UserCache[userId].Name;
                 chatHub = SlackConnection.ConnectedDMs().FirstOrDefault(x => x.Name.Equals(username, StringComparison.OrdinalIgnoreCase));
             }
 
