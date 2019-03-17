@@ -10,7 +10,7 @@ using Serilog;
 
 namespace PizzaLight.Resources
 {
-    public class PizzaPlanner : IMessageHandler, IMustBeInitialized
+    public class PizzaPlanner : IMustBeInitialized
     {
         string ACTIVEEVENTSFILE = "active plans";
         private readonly ILogger _logger;
@@ -50,10 +50,6 @@ namespace PizzaLight.Resources
             _logger.Information($"{this.GetType().Name} stopped succesfully.");
         }
 
-        public async Task HandleMessage(IncomingMessage incomingMessage)
-        {
-        }
-
         private async Task ScheduleNewEvents()
         {
             //trenger logikk for å lage nye event om ingen planlagt neste uke eler så
@@ -69,16 +65,14 @@ namespace PizzaLight.Resources
             
             var eventId = Guid.NewGuid().ToString();
             var timeOfEvent = GetDayOfNextEvent().AddHours(17);
-            var toInvite = GetPeopleToInvite();
+            var toInvite = GetPeopleToInvite(_config.RoomToInviteFrom, _config.InvitesPerEvent, new List<Person>());
+
             var newPlan = new PizzaPlan()
             {
                 Id = eventId,
                 TimeOfEvent = timeOfEvent,
                 Invited = toInvite.ToList(),
             };
-
-            _acitveplans.Add(newPlan);
-            _storage.SaveFile(ACTIVEEVENTSFILE, _acitveplans.ToArray());
             var inviteList = toInvite.Select(i => new Invitation()
             {
                 EventId = eventId,
@@ -86,25 +80,26 @@ namespace PizzaLight.Resources
                 UserName = i.UserName,
                 EventTime = timeOfEvent
             });
-            _pizzaInviter.AddToInviteList(inviteList);
+            await _pizzaInviter.Invite(inviteList);
+
+            _acitveplans.Add(newPlan);
+            _storage.SaveFile(ACTIVEEVENTSFILE, _acitveplans.ToArray());
         }
 
-        private List<Person> GetPeopleToInvite()
+        private List<Person> GetPeopleToInvite(string channelName, int targetGuestCount, IEnumerable<Person> ignoreUsers)
         {
-            var roomName = _config.Channels.First();
-            var channel = _core.SlackConnection.ConnectedHubs.Values.SingleOrDefault(r => r.Name == $"#{roomName}");
+            var channel = _core.SlackConnection.ConnectedHubs.Values.SingleOrDefault(r => r.Name == $"#{channelName}");
             if (channel == null)
             {
-                _logger.Warning("No such room: ", roomName);
+                _logger.Warning("No such room: ", channelName);
                 return new List<Person>();
             }
-
             var inviteCandidates = _core.SlackConnection.UserCache.Values.Where(u => channel.Members.Contains(u.Id)).Where(m => !m.IsBot).ToList();
-            var random = new Random();
+            inviteCandidates = inviteCandidates.Where(c => ignoreUsers.All(u => u.UserName != c.Name)).ToList();
 
+            var random = new Random();
             var numberOfCandidates = inviteCandidates.Count;
-            var numberToInvite = _config.InvitesPerEvent;
-            numberToInvite = Math.Min(numberToInvite, numberOfCandidates);
+            var numberToInvite = Math.Min(targetGuestCount, numberOfCandidates);
             var inviteList = new List<Person>(numberToInvite);
             for (int i = 0; i < numberToInvite; i++)
             {
@@ -133,7 +128,7 @@ namespace PizzaLight.Resources
             {
                 var pizzaEvent = _acitveplans.Single(e => e.Id == invitation.EventId);
                 var person = pizzaEvent.Invited
-                    .SingleOrDefault(i => i.UserName == invitation.UserName && invitation.Response== Invitation.ResponseEnum.NoResponse);
+                    .SingleOrDefault(i => i.UserName == invitation.UserName && invitation.Response != Invitation.ResponseEnum.NoResponse);
                 if (person == null)
                 {   return;}
 
@@ -163,6 +158,22 @@ namespace PizzaLight.Resources
             if (pizzaPlan.Accepted.Any() && !pizzaPlan.Invited.Any())
             {
                 await LockParticipants(pizzaPlan.Id);
+            }
+            var totalInvited = pizzaPlan.Accepted.Count + pizzaPlan.Invited.Count;
+            if (totalInvited < _config.InvitesPerEvent)
+            {
+                var newGuests = GetPeopleToInvite(_config.RoomToInviteFrom, _config.InvitesPerEvent-totalInvited, pizzaPlan.Rejected);
+                var inviteList = newGuests.Select(i => new Invitation()
+                {
+                    EventId = pizzaPlan.Id,
+                    UserId = i.UserId,
+                    UserName = i.UserName,
+                    EventTime = pizzaPlan.TimeOfEvent
+                });
+                await _pizzaInviter.Invite(inviteList);
+
+                pizzaPlan.Invited.AddRange(newGuests);
+                _storage.SaveFile(ACTIVEEVENTSFILE, _acitveplans.ToArray());
             }
         }
 

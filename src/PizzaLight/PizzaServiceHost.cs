@@ -27,7 +27,6 @@ namespace PizzaLight
         public async Task Start()
         {
             await _pizzaCore.Start();
-            _pizzaCore.AddMessageHandlerToPipeline(_planner);
             _pizzaCore.AddMessageHandlerToPipeline(_inviter);
 
             _resources = new List<IMustBeInitialized>(){ _inviter, _planner};

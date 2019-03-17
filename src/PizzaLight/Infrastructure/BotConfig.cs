@@ -11,7 +11,6 @@ namespace PizzaLight.Infrastructure
         //public bool StatsEnabled { get; }
         //public bool AboutEnabled { get; }
 
-        public string[] Channels { get; set; }
         public string RoomToInviteFrom { get; set; }
         public int InvitesPerEvent { get; set; }
     }

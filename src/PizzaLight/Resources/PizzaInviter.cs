@@ -35,7 +35,7 @@ namespace PizzaLight.Resources
 
             await _storage.Start();
             _activeInvitations = _storage.ReadFile<Invitation>(INVITESFILE).ToList();
-            SendInvites();
+            await SendInvites();
         }
 
         public async Task Stop()
@@ -45,14 +45,14 @@ namespace PizzaLight.Resources
         }
 
 
-        public void AddToInviteList(IEnumerable<Invitation> newInvites)
+        public async Task Invite(IEnumerable<Invitation> newInvites)
         {
             _activeInvitations.AddRange(newInvites);
             _storage.SaveFile(INVITESFILE, _activeInvitations.ToArray());
-            SendInvites();
+            await SendInvites();
         }
 
-        private void SendInvites()
+        private async Task SendInvites()
         {
             _logger.Debug("{NumberOfInvites} invites to send.", _activeInvitations.Count);
             while (_activeInvitations.Any(i => i.Invited == false))
@@ -73,7 +73,7 @@ namespace PizzaLight.Resources
                         ResponseType = ResponseType.DirectMessage,
                         UserId = user.Id,
                     };
-                    _core.SendMessage(message).Wait();
+                    await _core.SendMessage(message);
                     toInvite.Invited = true;
                     _storage.SaveFile(INVITESFILE, _activeInvitations.ToArray());
                     _logger.Information("Sent invite to user {UserName}", toInvite.UserName);
@@ -83,8 +83,6 @@ namespace PizzaLight.Resources
                     _logger.Warning("Could not send message because could not find user {UserName}", toInvite.UserName);
                 }
             }
-
-
         }
         public async Task HandleMessage(IncomingMessage incomingMessage)
         {
