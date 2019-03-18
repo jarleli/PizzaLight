@@ -5,4 +5,5 @@ RUN dotnet publish -c Release -o /buildfolder/output/pizzalight PizzaLight/Pizza
 
 FROM mcr.microsoft.com/dotnet/core/runtime:2.2 as RUNTIME
 COPY --from=BUILD /buildfolder/output ./app
-ENTRYPOINT ["dotnet", "app/pizzalight/PizzaLight.dll"]
+WORKDIR /app/pizzalight/
+ENTRYPOINT ["dotnet", "PizzaLight.dll"]

@@ -9,10 +9,10 @@ namespace PizzaLight.Controllers
     [Route("api")]
     public class ApiController: Controller
     {
-        private readonly PizzaCore _core;
+        private readonly IPizzaCore _core;
         private readonly PizzaPlanner _planner;
 
-        public ApiController(PizzaCore core, PizzaPlanner planner)
+        public ApiController(IPizzaCore core, PizzaPlanner planner)
         {
             _core = core ?? throw new ArgumentNullException(nameof(core)); ;
             _planner = planner ?? throw new ArgumentNullException(nameof(planner)); ;

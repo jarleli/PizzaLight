@@ -40,7 +40,7 @@ namespace PizzaLight.Resources
 
             await _storage.Start();
             _activeInvitations = _storage.ReadFile<Invitation>(INVITESFILE).ToList();
-            _timer = new Timer(async state => await SendInvitationsAndReminders(state), null, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(35));
+            _timer = new Timer(async state => await SendInvitationsAndReminders(state), null, TimeSpan.FromSeconds(60), TimeSpan.FromSeconds(60));
         }
 
         private async Task SendInvitationsAndReminders(object state)

@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
+using System.IO;
+using Common.Logging;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -15,9 +17,27 @@ namespace PizzaLight
         {
             try
             {
+#if (DEBUG)
+                string configFile = @"C:\temp\slack-temp\config\apitoken.json";
+#elif (RELEASE)
+                string configFile = @"data/config/apitoken.json";
+#endif
+
+                if (!File.Exists(configFile))
+                {
+                    throw new InvalidOperationException($"No such config file {configFile}. Current working directory is {Directory.GetCurrentDirectory()}");
+                }
+                var stateMarker = "data/state.json";
+                if (!File.Exists(stateMarker))
+                {
+                    throw new InvalidOperationException($"No such config file {stateMarker}. Current working directory is {Directory.GetCurrentDirectory()}");
+                }
+
+
+
                 var configuration = new ConfigurationBuilder()
                     .AddJsonFile("appsettings.json")
-                    .AddJsonFile(@"C:\temp\slack-temp\apitoken.json")
+                    .AddJsonFile(configFile)
                     .AddCommandLine(args)
                     .Build();
 
