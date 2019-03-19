@@ -150,16 +150,6 @@ namespace PizzaLight.Resources
                         await RejectInvitation(incomingMessage);
                     }
                 }
-                else if (incomingMessage.FullText == "yes" || incomingMessage.FullText == "no")
-                {
-                    var availability = (invitation.Response == Invitation.ResponseEnum.Accepted)
-                        ? "attending"
-                        : "unavailable";
-                    var reply = incomingMessage.ReplyDirectlyToUser(
-                        $"I already marked you down as {availability}. Have a nice day.");
-                    await _core.SendMessage(reply);
-                }
-                
             }
         }
 

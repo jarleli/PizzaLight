@@ -81,9 +81,10 @@ namespace PizzaLight.Resources
                 UserId = i.UserId,
                 UserName = i.UserName,
                 EventTime = timeOfEvent
-            });
+            }).ToList();
             _pizzaInviter.Invite(inviteList);
 
+            _logger.Information("Created a new Pizza Plan and invited {NumberOfParticipants} participants.", inviteList.Count());
             _acitveplans.Add(newPlan);
             _storage.SaveFile(ACTIVEEVENTSFILE, _acitveplans.ToArray());
         }
@@ -137,9 +138,7 @@ namespace PizzaLight.Resources
                 if (person == null)
                 {   return;}
 
-
                 pizzaEvent.Invited.Remove(person);
-
 
                 if (invitation.Response == Invitation.ResponseEnum.Accepted)
                 {
@@ -162,10 +161,6 @@ namespace PizzaLight.Resources
 
         private async Task PlanChanged(PizzaPlan pizzaPlan)
         {
-            if (pizzaPlan.Accepted.Any() && !pizzaPlan.Invited.Any())
-            {
-                await LockParticipants(pizzaPlan.Id);
-            }
             var totalInvited = pizzaPlan.Accepted.Count + pizzaPlan.Invited.Count;
             if (totalInvited < _config.InvitesPerEvent)
             {
@@ -179,28 +174,31 @@ namespace PizzaLight.Resources
                 }).ToList();
                 if (!inviteList.Any())
                 {
-                    _logger.Information("Found no more eligible users to invite to event.");
-                    return;
+                    _logger.Information("Found no more eligible users to invite to event {EventId}.", pizzaPlan.Id);
                 }
-
                 _pizzaInviter.Invite(inviteList);
                 pizzaPlan.Invited.AddRange(newGuests);
                 _storage.SaveFile(ACTIVEEVENTSFILE, _acitveplans.ToArray());
             }
+
+            if (pizzaPlan.Accepted.Any() && !pizzaPlan.Invited.Any())
+            {
+                await LockParticipants(pizzaPlan);
+            }
         }
 
-        private async Task LockParticipants(string id)
+        private async Task LockParticipants(PizzaPlan pizzaPlan)
         {
-            var pizzaEvent = _acitveplans.Single(e => e.Id == id);
-            pizzaEvent.ParticipantsLocked = true;
-            var day = pizzaEvent.TimeOfEvent.LocalDateTime.ToString("dddd, MMMM dd");
-            var time = pizzaEvent.TimeOfEvent.LocalDateTime.ToString("HH:mm");
-            var participantlist = string.Join(",", pizzaEvent.Accepted.Select(a=>$"@{a.UserName}"));
-            var text = $"Great news! This amazing group of friends have accepted the invitation for a pizza date on *{day} at {time}* \n" +
+            _logger.Information("Locking pizza plan {EventId} with {NumberOfParticipants} participants", pizzaPlan.Id, pizzaPlan.Accepted.Count);
+            pizzaPlan.ParticipantsLocked = true;
+            var day = pizzaPlan.TimeOfEvent.LocalDateTime.ToString("dddd, MMMM dd");
+            var time = pizzaPlan.TimeOfEvent.LocalDateTime.ToString("HH:mm");
+            var participantlist = string.Join(",", pizzaPlan.Accepted.Select(a=>$"@{a.UserName}"));
+            var text = $"Great news! This amazing group has accepted the invitation for a pizza date on *{day} at {time}* \n" +
                        $"{participantlist} \n" +
                        $"If you don't know them all yet, now is an excellent opportunity. Please have a fantatic time!";
 
-            foreach (var person in pizzaEvent.Accepted)
+            foreach (var person in pizzaPlan.Accepted)
             {
                 var message = new ResponseMessage()
                 {
