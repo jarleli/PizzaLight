@@ -136,26 +136,22 @@ namespace PizzaLight.Resources
 
         public async Task HandleMessage(IncomingMessage incomingMessage)
         {
-            var invitation = _activeInvitations.FirstOrDefault(inv => incomingMessage.UserId == inv.UserId);
-            if (invitation != null)
+            var existingInvitation = _activeInvitations.FirstOrDefault(inv => incomingMessage.UserId == inv.UserId);
+            if (existingInvitation?.Response == Invitation.ResponseEnum.NoResponse)
             {
-                if (invitation.Response == Invitation.ResponseEnum.NoResponse)
+                if(new[] { "yes", "Yes", "YES", "Yes.", "Yes!"}.Contains(incomingMessage.FullText))
                 {
-                    if (incomingMessage.FullText == "yes")
-                    {
-                        await AcceptInvitation(incomingMessage);
-                    }
-                    if (incomingMessage.FullText == "no")
-                    {
-                        await RejectInvitation(incomingMessage);
-                    }
+                    await AcceptInvitation(incomingMessage);
+                }
+                if (new[] { "no", "No", "NO", "No.", "No!" }.Contains(incomingMessage.FullText))
+                {
+                    await RejectInvitation(incomingMessage);
                 }
             }
         }
 
         private async Task AcceptInvitation(IncomingMessage incomingMessage)
         {
-
             var invitation = _activeInvitations.Single(i => i.UserId == incomingMessage.UserId);
             invitation.Response = Invitation.ResponseEnum.Accepted;
             await RaiseOnInvitationChanged(invitation);

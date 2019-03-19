@@ -15,3 +15,4 @@ Run the docker image and set up a folder for persistence and a port for forwardi
 ```
 docker run --rm -it -v /data/pizzalight/:/app/pizzalight/data/ -p 5000:5000 pizzabot
 ```
+You must make a data folder at /data/pizzalight/ to hold your config with apitoken and a file called state.json to start the application. This is linked into the docker container in the above command.
