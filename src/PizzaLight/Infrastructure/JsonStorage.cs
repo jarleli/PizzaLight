@@ -2,10 +2,9 @@
 using System.IO;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
-using Noobot.Core.MessagingPipeline.Request;
 using Serilog;
 
-namespace PizzaLight.Resources
+namespace PizzaLight.Infrastructure
 {
     public class JsonStorage : IFileStorage
     {

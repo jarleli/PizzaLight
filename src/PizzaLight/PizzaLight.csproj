@@ -15,6 +15,7 @@
     <PackageReference Include="Noobot.Core" Version="3.2.76" />
     <PackageReference Include="Noobot.Toolbox" Version="3.1.6" />
     <PackageReference Include="serilog.aspnetcore" Version="2.1.1" />
+    <PackageReference Include="Serilog.Formatting.Compact" Version="1.0.0" />
     <PackageReference Include="serilog.sinks.coloredconsole" Version="3.0.1" />
     <PackageReference Include="Topshelf" Version="4.2.0" />
   </ItemGroup>

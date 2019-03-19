@@ -1,19 +1,17 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Noobot.Core.MessagingPipeline.Request;
 using Noobot.Core.MessagingPipeline.Response;
 using PizzaLight.Infrastructure;
 using PizzaLight.NoobotInternals;
-using PizzaLight.Resources;
 using Serilog;
 using SlackConnector;
 using SlackConnector.Models;
 using StructureMap.TypeRules;
 
-namespace PizzaLight
+namespace PizzaLight.Resources
 {
     public class PizzaCore : IPizzaCore
     {
@@ -36,14 +34,14 @@ namespace PizzaLight
 
         public async Task Start()
         {
-            _logger.Information("Starting PizzaCore");
+            _logger.Debug("Starting PizzaCore");
             await CreateConnection();
             _logger.Information("PizzaCore finished starting up.");
         }
 
         private async Task CreateConnection()
         {
-            _logger.Information("Connecting...");
+            _logger.Debug("Connecting...");
             var task = ConnectToSlack();
             await task.ContinueWith(t =>
                 {
@@ -64,8 +62,8 @@ namespace PizzaLight
             SlackConnection.OnReconnect += OnReconnect;
 
             _logger.Information("Connected!");
-            _logger.Information($"Bots Name: {SlackConnection.Self.Name}");
-            _logger.Information($"Team Name: {SlackConnection.Team.Name}");
+            _logger.Verbose($"Team Name: {SlackConnection.Team.Name}");
+            _logger.Verbose($"Bots Name: {SlackConnection.Self.Name}");
         }
 
         public void Stop()

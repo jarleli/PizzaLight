@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.DirectoryServices.AccountManagement;
 using System.IO;
 using Common.Logging;
 using Microsoft.AspNetCore.Hosting;
@@ -8,6 +9,11 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Serilog;
 using Serilog.AspNetCore;
+using Serilog.Core;
+using Serilog.Events;
+using Serilog.Filters;
+using Serilog.Formatting.Compact;
+using Serilog.Formatting.Json;
 
 namespace PizzaLight
 {
@@ -15,47 +21,48 @@ namespace PizzaLight
     {
         public static void Main(string[] args)
         {
-            try
-            {
 #if (DEBUG)
-                string configFile = @"C:\temp\pizzalight\data\config\apitoken.json";
+            string configFile = @"C:\temp\pizzalight\data\config\apitoken.json";
 #elif (RELEASE)
-                string configFile = @"data/config/apitoken.json";
+            string configFile = @"data/config/apitoken.json";
 #endif
 
-                if (!File.Exists(configFile))
-                {
-                    throw new InvalidOperationException($"No such config file {configFile}. Current working directory is {Directory.GetCurrentDirectory()}");
-                }
-                var stateMarker = "data/state.json";
-                if (!File.Exists(stateMarker))
-                {
-                    throw new InvalidOperationException($"No such config file {stateMarker}. Current working directory is {Directory.GetCurrentDirectory()}");
-                }
+            if (!File.Exists(configFile))
+            {
+                throw new InvalidOperationException(
+                    $"No such config file {configFile}. Current working directory is {Directory.GetCurrentDirectory()}");
+            }
+            var stateFile = "data/state.json";
+            if (!File.Exists(stateFile))
+            {
+                throw new InvalidOperationException(
+                    $"No such config file {stateFile}. Current working directory is {Directory.GetCurrentDirectory()}");
+            }
 
+            var logger = ConfigureAndCreateSerilogLogger();
+            var configuration = new ConfigurationBuilder()
+                .AddJsonFile("appsettings.json")
+                .AddJsonFile(configFile)
+                .AddCommandLine(args)
+                .Build();
 
+            var httpUri = "http://0.0.0.0:5000";
+            logger.Information("Starting HTTP server on " + httpUri);
 
-                var configuration = new ConfigurationBuilder()
-                    .AddJsonFile("appsettings.json")
-                    .AddJsonFile(configFile)
-                    .AddCommandLine(args)
-                    .Build();
-
-                var httpUri = "http://0.0.0.0:5000";
+            try
+            {
                 var host = new WebHostBuilder()
-                    .UseConfiguration(configuration)
-                    .ConfigureLogging((context, builder) =>
-                    {
-                        var logger = new LoggerConfiguration().WriteTo.ColoredConsole().CreateLogger();
-                        builder.Services.AddSingleton<Serilog.ILogger>(logger);
-                        builder.Services.AddSingleton<ILoggerFactory>(services => new SerilogLoggerFactory(logger, false));
-                    } )
-                    .UseStartup<Startup>()
-                    .UseKestrel()
-                    .UseUrls(httpUri)
-                    .Build();
+                       .UseConfiguration(configuration)
+                       .ConfigureLogging((context, builder) =>
+                       {
+                           builder.Services.AddSingleton<Serilog.ILogger>(logger);
+                           builder.Services.AddSingleton<ILoggerFactory>(services => new SerilogLoggerFactory(logger, false));
+                       })
+                       .UseStartup<Startup>()
+                       .UseKestrel()
+                       .UseUrls(httpUri)
+                       .Build();
 
-                Console.WriteLine("Starting HTTP server on " + httpUri);
                 using (host)
                 {
                     host.Start();
@@ -64,9 +71,23 @@ namespace PizzaLight
             }
             catch (Exception e)
             {
-                Console.WriteLine("Error: " + e);
-                Console.ReadLine();
+                logger.Fatal(e, "Error starting app!");
+                throw;
             }
+        }
+
+        public static Serilog.ILogger ConfigureAndCreateSerilogLogger()
+        {
+            var loggerConfiguration = new LoggerConfiguration()
+                .WriteTo.Console();
+            loggerConfiguration.Enrich.FromLogContext();
+            loggerConfiguration.Filter
+                .ByExcluding(e=> Matching.FromSource("Microsoft.AspNetCore")(e) && e.Level < LogEventLevel.Warning);
+
+            loggerConfiguration.MinimumLevel.Verbose();
+            var logger = loggerConfiguration.CreateLogger();
+            logger.Debug("Initilized logger.");
+            return logger;
         }
     }
 }

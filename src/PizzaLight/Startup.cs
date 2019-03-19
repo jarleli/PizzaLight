@@ -30,6 +30,7 @@ namespace PizzaLight
             services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_1);
             services.AddSingleton(Configuration.GetSection("Bot").Get<BotConfig>());
             services.AddSingleton<IFileStorage, JsonStorage>();
+            services.AddSingleton<IActivityLog, ActivityLog>();
             services.AddSingleton<PizzaPlanner>();
             services.AddSingleton<IPizzaInviter, PizzaInviter>();
             services.AddSingleton<IPizzaCore, PizzaCore>();

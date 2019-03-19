@@ -6,7 +6,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Noobot.Core.MessagingPipeline.Request;
-using Noobot.Core.MessagingPipeline.Response;
+using PizzaLight.Infrastructure;
 using PizzaLight.Models;
 using Serilog;
 using SlackConnector.Models;
@@ -16,6 +16,7 @@ namespace PizzaLight.Resources
     
     public class PizzaInviter : IPizzaInviter
     {
+        private readonly IActivityLog _activityLog;
         private readonly ILogger _logger;
         private readonly IFileStorage _storage;
         private readonly IPizzaCore _core;
@@ -29,8 +30,9 @@ namespace PizzaLight.Resources
         // ReSharper restore InconsistentNaming
 
 
-        public PizzaInviter(ILogger logger, IFileStorage storage, IPizzaCore core)
+        public PizzaInviter(ILogger logger, IFileStorage storage, IPizzaCore core, IActivityLog activityLog)
         {
+            _activityLog = activityLog ?? throw new ArgumentNullException(nameof(activityLog));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _storage = storage ?? throw new ArgumentNullException(nameof(storage));
             _core = core ?? throw new ArgumentNullException(nameof(core));
@@ -39,6 +41,7 @@ namespace PizzaLight.Resources
         public async Task Start()
         {          
             if(_core == null) throw new ArgumentNullException(nameof(_core));
+            _logger.Debug("Starting Pizza Inviter.");
 
             await _storage.Start();
             _activeInvitations = _storage.ReadFile<Invitation>(INVITESFILE).ToList();
@@ -79,7 +82,7 @@ namespace PizzaLight.Resources
                 await _core.SendMessage(message);
                 invitation.Invited = DateTimeOffset.UtcNow;
                 _storage.SaveFile(INVITESFILE, _activeInvitations.ToArray());
-                _logger.Information("Sent invite to user {UserName}", invitation.UserName);
+                _activityLog.Log($"Sent INVITE to event {invitation.EventId} to user {invitation.UserName}");
             }
         }
 
@@ -93,7 +96,6 @@ namespace PizzaLight.Resources
             { return; }
 
             _logger.Information("Sending {NumberOfReminders} reminders.", reminders.Count);
-
             Invitation reminder;
             while ((reminder = reminders.FirstOrDefault(i => i.Reminded == null)) != null)                                                 
             {
@@ -101,7 +103,8 @@ namespace PizzaLight.Resources
                 await _core.SendMessage(message);
                 reminder.Reminded = DateTimeOffset.UtcNow;
                 _storage.SaveFile(INVITESFILE, _activeInvitations.ToArray());
-                _logger.Information("Sent reminder to user {UserName}", reminder.UserName);
+                _activityLog.Log($"Sent REMINDER to event {reminder.EventId} to user {reminder.UserName}");
+
             }
         }
 
@@ -127,7 +130,7 @@ namespace PizzaLight.Resources
                 await RaiseOnInvitationChanged(invitation);
 
                 _storage.SaveFile(INVITESFILE, _activeInvitations.ToArray());
-                _logger.Information("Sent expiration to user {UserName}", invitation.UserName);
+                _activityLog.Log($"Sent EXPIRATION to event {invitation.EventId} to user {invitation.UserName}");
             }
         }
 
@@ -157,12 +160,11 @@ namespace PizzaLight.Resources
 
             var invitation = _activeInvitations.Single(i => i.UserId == incomingMessage.UserId);
             invitation.Response = Invitation.ResponseEnum.Accepted;
+            _activityLog.Log($"User {incomingMessage.Username} accepted the invitation for event {invitation.EventId}");
             await RaiseOnInvitationChanged(invitation);
 
             _activeInvitations.Remove(invitation);
             _storage.SaveFile(INVITESFILE, _activeInvitations.ToArray());
-            _logger.Information("User {UserName} accepted the invitation for event.", incomingMessage.Username);
-
         }
 
         private async Task RejectInvitation(IncomingMessage incomingMessage)
@@ -170,11 +172,11 @@ namespace PizzaLight.Resources
             var invitation = _activeInvitations.Single(i => i.UserId == incomingMessage.UserId);
             invitation.Response= Invitation.ResponseEnum.Rejected;
             _activeInvitations.Remove(invitation);
+            _activityLog.Log($"User {incomingMessage.Username} REJECTED the invitation for event {invitation.EventId}");
             await RaiseOnInvitationChanged(invitation);
 
             _activeInvitations.Remove(invitation);
             _storage.SaveFile(INVITESFILE, _activeInvitations.ToArray());
-            _logger.Information("User {UserName} rejected the invitation for event.", incomingMessage.Username);
 
             var reply = incomingMessage.ReplyDirectlyToUser("That is too bad, I will try to find someone else.");
             await _core.SendMessage(reply);
@@ -198,58 +200,6 @@ namespace PizzaLight.Resources
                     _logger.Error(ex, "Error Raising OnAcceptedInvitation.");
                 }
             }
-        }
-    }
-
-    public static class ResponseMessageExtensions
-    {
-        public static ResponseMessage CreateNewInvitationMessage(this Invitation invitation)
-        {
-            var day = invitation.EventTime.LocalDateTime.ToString("dddd, MMMM dd");
-            var time = invitation.EventTime.LocalDateTime.ToString("HH:mm");
-            var message = new ResponseMessage()
-            {
-                Text =
-                    $"Hello @{invitation.UserName}. \n" +
-                    $"Do you want to meet up for a social gathering and eat some tasty pizza with other colleagues on *{day} at {time}*? \n" +
-                    "Four other random colleagues have also been invited, and if you want to get to know them better all you have to do is reply yes if you want to accept this invitation or no if you can't make it and I will invite someone else in your stead. \n" +
-                    "Please reply `yes` or `no`.",
-
-                ResponseType = ResponseType.DirectMessage,
-                UserId = invitation.UserId,
-            };
-            return message;
-        }
-        public static ResponseMessage CreateReminderMessage(this Invitation reminder)
-        {
-            var day = reminder.EventTime.LocalDateTime.ToString("dddd, MMMM dd");
-            var time = reminder.EventTime.LocalDateTime.ToString("HH:mm");
-            var message = new ResponseMessage()
-            {
-                Text =
-                    $"Hello @{reminder.UserName}. I recently sent you an invitation for a social pizza event on *{day} at {time}*. \n" +
-                    "Since you haven't responded yet I'm sending you this friendly reminder. If you don't respond before tomorrow I will assume that you cannot make it and will invite someone else instead. \n" +
-                    "Please reply `yes` or `no` to indicate whether you can make it..",
-
-                ResponseType = ResponseType.DirectMessage,
-                UserId = reminder.UserId,
-            };
-            return message;
-        }
-
-        public static ResponseMessage CreateExpiredInvitationMessage(this Invitation invitation)
-        {
-            var message = new ResponseMessage()
-            {
-                Text =
-                    $"Hello @{invitation.UserName}." +
-                    $"Sadly, you didn't respond to my invitation and I will now invite someone else instead." +
-                    $"Maybe we will have better luck sometime later.",
-
-                ResponseType = ResponseType.DirectMessage,
-                UserId = invitation.UserId,
-            };
-            return message;
         }
     }
 }

@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
+using PizzaLight.Infrastructure;
 using PizzaLight.Models;
 
 namespace PizzaLight.Resources

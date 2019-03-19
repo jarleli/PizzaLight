@@ -2,17 +2,19 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using Noobot.Core.MessagingPipeline.Request;
 using Noobot.Core.MessagingPipeline.Response;
 using PizzaLight.Infrastructure;
 using PizzaLight.Models;
-using Serilog;
+using ILogger = Serilog.ILogger;
 
 namespace PizzaLight.Resources
 {
     public class PizzaPlanner : IMustBeInitialized
     {
         string ACTIVEEVENTSFILE = "active plans";
+        private readonly IActivityLog _activityLog;
         private readonly ILogger _logger;
         private readonly IFileStorage _storage;
         private readonly IPizzaInviter _pizzaInviter;
@@ -23,8 +25,9 @@ namespace PizzaLight.Resources
 
         public List<PizzaPlan> PizzaPlans => _acitveplans;
 
-        public PizzaPlanner(ILogger logger, BotConfig config, IFileStorage storage, IPizzaInviter pizzaInviter, IPizzaCore core)
+        public PizzaPlanner(ILogger logger, BotConfig config, IFileStorage storage, IPizzaInviter pizzaInviter, IPizzaCore core, IActivityLog activityLog)
         {
+            _activityLog = activityLog;
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _storage = storage ?? throw new ArgumentNullException(nameof(storage));
             _pizzaInviter = pizzaInviter ?? throw new ArgumentNullException(nameof(pizzaInviter));
@@ -34,7 +37,7 @@ namespace PizzaLight.Resources
 
         public async Task Start()
         {
-            _logger.Debug("Starting Pizza Planner");
+            _logger.Debug("Starting Pizza Planner.");
             await _storage.Start();
             _acitveplans = _storage.ReadFile<PizzaPlan>(ACTIVEEVENTSFILE).ToList();
 
@@ -63,7 +66,7 @@ namespace PizzaLight.Resources
 
         private async Task ScheduleNewEvent()
         {
-            _logger.Information("Creating new event...");
+            _logger.Debug("Creating new event...");
             
             var eventId = Guid.NewGuid().ToString();
             var timeOfEvent = GetTimeOfNextEvent();
@@ -84,7 +87,7 @@ namespace PizzaLight.Resources
             }).ToList();
             _pizzaInviter.Invite(inviteList);
 
-            _logger.Information("Created a new Pizza Plan and invited {NumberOfParticipants} participants.", inviteList.Count());
+            _activityLog.Log($"Created a new Pizza Plan for {inviteList.Count} participants.");
             _acitveplans.Add(newPlan);
             _storage.SaveFile(ACTIVEEVENTSFILE, _acitveplans.ToArray());
         }
@@ -180,6 +183,10 @@ namespace PizzaLight.Resources
                 {
                     _logger.Information("Found no more eligible users to invite to event {EventId}.", pizzaPlan.Id);
                 }
+                else
+                {
+                    _activityLog.Log($"Added {inviteList.Count} more guests to event {pizzaPlan.Id}");
+                }
                 _pizzaInviter.Invite(inviteList);
                 pizzaPlan.Invited.AddRange(newGuests);
                 _storage.SaveFile(ACTIVEEVENTSFILE, _acitveplans.ToArray());
@@ -193,11 +200,12 @@ namespace PizzaLight.Resources
 
         private async Task LockParticipants(PizzaPlan pizzaPlan)
         {
-            _logger.Information("Locking pizza plan {EventId} with {NumberOfParticipants} participants", pizzaPlan.Id, pizzaPlan.Accepted.Count);
+            var participantlist = string.Join(",", pizzaPlan.Accepted.Select(a => $"@{a.UserName}"));
+            _activityLog.Log($"Locking pizza plan {pizzaPlan.Id} with  participants ({pizzaPlan.Accepted.Count}) {participantlist}");
+
             pizzaPlan.ParticipantsLocked = true;
             var day = pizzaPlan.TimeOfEvent.LocalDateTime.ToString("dddd, MMMM dd");
             var time = pizzaPlan.TimeOfEvent.LocalDateTime.ToString("HH:mm");
-            var participantlist = string.Join(",", pizzaPlan.Accepted.Select(a=>$"@{a.UserName}"));
             var text = $"Great news! This amazing group has accepted the invitation for a pizza date on *{day} at {time}* \n" +
                        $"{participantlist} \n" +
                        $"If you don't know them all yet, now is an excellent opportunity. Please have a fantatic time!";

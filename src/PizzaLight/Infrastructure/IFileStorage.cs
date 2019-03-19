@@ -1,4 +1,4 @@
-﻿namespace PizzaLight.Resources
+﻿namespace PizzaLight.Infrastructure
 {
     public interface IFileStorage : IMustBeInitialized
     {

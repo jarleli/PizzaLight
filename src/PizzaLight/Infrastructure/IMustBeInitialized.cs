@@ -1,6 +1,6 @@
 ﻿using System.Threading.Tasks;
 
-namespace PizzaLight.Resources
+namespace PizzaLight.Infrastructure
 {
     public interface IMustBeInitialized
     {

@@ -25,6 +25,7 @@ namespace PizzaLight.Tests.Unit
         private Mock<ISlackConnection> _connection;
         private string _channel;
         private ConcurrentDictionary<string, SlackUser> _userCache;
+        private Mock<IActivityLog> _activity;
 
         [OneTimeSetUp]
         public void Setup()
@@ -35,6 +36,7 @@ namespace PizzaLight.Tests.Unit
             _inviter = new Mock<IPizzaInviter>();
             _storage = new Mock<IFileStorage>();
             _logger = new Mock<ILogger>();
+            _activity = new Mock<IActivityLog>();
             _connection = new Mock<ISlackConnection>();
             _core.SetupGet(c => c.SlackConnection).Returns(_connection.Object);
             var hubs = new ConcurrentDictionary<string, SlackChatHub>();
@@ -48,7 +50,7 @@ namespace PizzaLight.Tests.Unit
             _userCache.TryAdd("user3", new SlackUser() { Name = "user3", Id = "id3" });
             _core.Setup(c => c.UserCache).Returns(_userCache);
 
-            _planner = new PizzaPlanner(_logger.Object, _config, _storage.Object, _inviter.Object, _core.Object);
+            _planner = new PizzaPlanner(_logger.Object, _config, _storage.Object, _inviter.Object, _core.Object, _activity.Object);
         }
 
         [Test]

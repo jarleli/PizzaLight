@@ -1,11 +1,11 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 using Noobot.Core.MessagingPipeline.Response;
-using PizzaLight.Resources;
+using PizzaLight.Infrastructure;
 using SlackConnector;
 using SlackConnector.Models;
 
-namespace PizzaLight
+namespace PizzaLight.Resources
 {
     public interface IPizzaCore
     {
