@@ -155,7 +155,6 @@ namespace PizzaLight
 
         public async Task MessageReceived(SlackMessage message)
         {
-            Stopwatch stopwatch = Stopwatch.StartNew();
             _logger.Information("[Message found from '{FromUserName}']", message.User.Name);
             _logger.Debug(message.Text);
 
@@ -176,15 +175,15 @@ namespace PizzaLight
 
             incomingMessage.TargetedText = incomingMessage.GetTargetedText();
 
-
+            if (message.ChatHub.Type != SlackChatHubType.DM)
+            {
+                return;
+            }
             foreach (var resource in _messageHandlers)
             {
                 await resource.HandleMessage(incomingMessage);
             }
-            stopwatch.Stop();
 
-            //_logger.Information($"[Message ended - Took {stopwatch.ElapsedMilliseconds} milliseconds]");
-            //_averageResponse.Log(stopwatch.ElapsedMilliseconds);
         }
 
         public async Task SendMessage(ResponseMessage responseMessage)

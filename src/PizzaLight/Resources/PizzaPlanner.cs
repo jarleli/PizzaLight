@@ -138,8 +138,10 @@ namespace PizzaLight.Resources
                 if (person == null)
                 {   return;}
 
-                pizzaEvent.Invited.Remove(person);
-
+                if (pizzaEvent.Invited.Contains(person))
+                {
+                    pizzaEvent.Invited.Remove(person);
+                }
                 if (invitation.Response == Invitation.ResponseEnum.Accepted)
                 {
                     pizzaEvent.Accepted.Add(person);
@@ -164,7 +166,9 @@ namespace PizzaLight.Resources
             var totalInvited = pizzaPlan.Accepted.Count + pizzaPlan.Invited.Count;
             if (totalInvited < _config.InvitesPerEvent)
             {
-                var newGuests = GetPeopleToInvite(_config.RoomToInviteFrom, _config.InvitesPerEvent-totalInvited, pizzaPlan.Rejected);
+                var ignoreUsers = pizzaPlan.Rejected.ToList();
+                ignoreUsers.AddRange(pizzaPlan.Accepted);
+                var newGuests = GetPeopleToInvite(_config.RoomToInviteFrom, _config.InvitesPerEvent-totalInvited, ignoreUsers);
                 var inviteList = newGuests.Select(i => new Invitation()
                 {
                     EventId = pizzaPlan.Id,

@@ -152,15 +152,17 @@ namespace PizzaLight.Resources
 
         private async Task AcceptInvitation(IncomingMessage incomingMessage)
         {
+            var reply = incomingMessage.ReplyDirectlyToUser("Thank you. I will keep you informed when the other guests have accepted!");
+            await _core.SendMessage(reply);
+
             var invitation = _activeInvitations.Single(i => i.UserId == incomingMessage.UserId);
             invitation.Response = Invitation.ResponseEnum.Accepted;
             await RaiseOnInvitationChanged(invitation);
 
+            _activeInvitations.Remove(invitation);
             _storage.SaveFile(INVITESFILE, _activeInvitations.ToArray());
             _logger.Information("User {UserName} accepted the invitation for event.", incomingMessage.Username);
 
-            var reply = incomingMessage.ReplyDirectlyToUser("Thank you. I will keep you informed when the other guests have accepted!");
-            await _core.SendMessage(reply);
         }
 
         private async Task RejectInvitation(IncomingMessage incomingMessage)
@@ -170,6 +172,7 @@ namespace PizzaLight.Resources
             _activeInvitations.Remove(invitation);
             await RaiseOnInvitationChanged(invitation);
 
+            _activeInvitations.Remove(invitation);
             _storage.SaveFile(INVITESFILE, _activeInvitations.ToArray());
             _logger.Information("User {UserName} rejected the invitation for event.", incomingMessage.Username);
 
