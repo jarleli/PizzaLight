@@ -18,7 +18,7 @@ namespace PizzaLight
             try
             {
 #if (DEBUG)
-                string configFile = @"C:\temp\slack-temp\config\apitoken.json";
+                string configFile = @"C:\temp\pizzalight\data\config\apitoken.json";
 #elif (RELEASE)
                 string configFile = @"data/config/apitoken.json";
 #endif

@@ -13,5 +13,5 @@ docker build -t pizzabot:latest https://github.com/jarleli/PizzaLight.git
 ```
 Run the docker image and set up a folder for persistence and a port for forwarding
 ```
-docker run --rm -it -v /data/pizzalight/:/app/pizzalight/data/ pizzabot -p 5000:5000
+docker run --rm -it -v /data/pizzalight/:/app/pizzalight/data/ -p 5000:5000 pizzabot
 ```

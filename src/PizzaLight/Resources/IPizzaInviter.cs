@@ -8,6 +8,6 @@ namespace PizzaLight.Resources
     {
         event PizzaInviter.InvitationChangedEventHandler OnInvitationChanged;
 
-        Task Invite(IEnumerable<Invitation> newInvites);
+        void Invite(IEnumerable<Invitation> newInvites);
     }
 }

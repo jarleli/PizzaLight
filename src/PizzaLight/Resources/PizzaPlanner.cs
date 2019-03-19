@@ -82,7 +82,7 @@ namespace PizzaLight.Resources
                 UserName = i.UserName,
                 EventTime = timeOfEvent
             });
-            await _pizzaInviter.Invite(inviteList);
+            _pizzaInviter.Invite(inviteList);
 
             _acitveplans.Add(newPlan);
             _storage.SaveFile(ACTIVEEVENTSFILE, _acitveplans.ToArray());
@@ -98,6 +98,7 @@ namespace PizzaLight.Resources
             }
             var inviteCandidates = _core.UserCache.Values.Where(u => channel.Members.Contains(u.Id)).Where(m => !m.IsBot).ToList();
             inviteCandidates = inviteCandidates.Where(c => ignoreUsers.All(u => u.UserName != c.Name)).ToList();
+            //inviteCandidates = inviteCandidates.Where(c => c.Name == "jarlelin").ToList();
 
             var random = new Random();
             var numberOfCandidates = inviteCandidates.Count;
@@ -138,11 +139,13 @@ namespace PizzaLight.Resources
 
 
                 pizzaEvent.Invited.Remove(person);
+
+
                 if (invitation.Response == Invitation.ResponseEnum.Accepted)
                 {
                     pizzaEvent.Accepted.Add(person);
                 }
-                if (invitation.Response == Invitation.ResponseEnum.Rejected)
+                if (invitation.Response == Invitation.ResponseEnum.Rejected || invitation.Response == Invitation.ResponseEnum.Expired)
                 {
                     pizzaEvent.Rejected.Add(person);
                 }
@@ -180,7 +183,7 @@ namespace PizzaLight.Resources
                     return;
                 }
 
-                await _pizzaInviter.Invite(inviteList);
+                _pizzaInviter.Invite(inviteList);
                 pizzaPlan.Invited.AddRange(newGuests);
                 _storage.SaveFile(ACTIVEEVENTSFILE, _acitveplans.ToArray());
             }

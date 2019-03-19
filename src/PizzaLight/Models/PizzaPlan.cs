@@ -8,8 +8,8 @@ namespace PizzaLight.Models
         public string Id { get; set; }
         public DateTimeOffset TimeOfEvent { get; set; }
         public List<Person> Invited { get; set; } = new List<Person>();
-        public List<Person> Rejected { get; set; } = new List<Person>();
         public List<Person> Accepted { get; set; } = new List<Person>();
+        public List<Person> Rejected { get; set; } = new List<Person>();
         public bool ParticipantsLocked { get; set; }
     }
     public class Person

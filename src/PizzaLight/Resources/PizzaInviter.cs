@@ -9,6 +9,7 @@ using Noobot.Core.MessagingPipeline.Request;
 using Noobot.Core.MessagingPipeline.Response;
 using PizzaLight.Models;
 using Serilog;
+using SlackConnector.Models;
 
 namespace PizzaLight.Resources
 {
@@ -24,6 +25,7 @@ namespace PizzaLight.Resources
         // ReSharper disable InconsistentNaming
         private const string INVITESFILE = "active invites";
         private const int HOURSTOWAITBEFOREREMINDING = 23;
+        private const int HOURSTOWAITBEFORECANCELLINGINVITATION = 25;
         // ReSharper restore InconsistentNaming
 
 
@@ -40,14 +42,7 @@ namespace PizzaLight.Resources
 
             await _storage.Start();
             _activeInvitations = _storage.ReadFile<Invitation>(INVITESFILE).ToList();
-            _timer = new Timer(async state => await SendInvitationsAndReminders(state), null, TimeSpan.FromSeconds(60), TimeSpan.FromSeconds(60));
-        }
-
-        private async Task SendInvitationsAndReminders(object state)
-        {
-            _logger.Information("Running scheduled invitations and reminders.");
-            await SendInvites();
-            await SendReminders();
+            _timer = new Timer(async state => await SendInvitationsAndReminders(state), null, TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(60));
         }
 
         public async Task Stop()
@@ -57,80 +52,86 @@ namespace PizzaLight.Resources
             _logger.Information($"{this.GetType().Name} stopped succesfully.");
         }
 
-        public async Task Invite(IEnumerable<Invitation> newInvites)
+        private async Task SendInvitationsAndReminders(object state)
+        {
+            await SendInvites();
+            await SendReminders();
+            await CancelOldInvitations();
+        }
+
+        public void Invite(IEnumerable<Invitation> newInvites)
         {
             _activeInvitations.AddRange(newInvites);
             _storage.SaveFile(INVITESFILE, _activeInvitations.ToArray());
-            await SendInvites();
         }
 
         private async Task SendInvites()
         {
-            Invitation toInvite;
-            while ((toInvite = _activeInvitations.FirstOrDefault(i => i.Invited == null)) != null)
-            {
-                _logger.Information("Sending {NumberOfInvites} invites.", _activeInvitations.Count);
-                if (_core.UserCache.TryGetValue(toInvite.UserId, out var user))
-                {
-                    var day = toInvite.EventTime.LocalDateTime.ToString("dddd, MMMM dd");
-                    var time = toInvite.EventTime.LocalDateTime.ToString("HH:mm");
-                    var message = new ResponseMessage()
-                    {
-                        Text =
-                            $"Hello @{user.Name}. \n" +
-                            $"Do you want to meet up for a social gathering and eat some tasty pizza with other colleagues on *{day} at {time}*? \n" +
-                            "Four other random colleagues have also been invited, and if you want to get to know them better all you have to do is reply yes if you want to accept this invitation or no if you can't make it and I will invite someone else in your stead. \n" +
-                            "Please reply `yes` or `no`.",
+            var unsentInvitations = _activeInvitations.Where(i => i.Invited == null).ToList();
+            if (!unsentInvitations.Any())
+            {   return;}
 
-                        ResponseType = ResponseType.DirectMessage,
-                        UserId = user.Id,
-                    };
-                    await _core.SendMessage(message);
-                    toInvite.Invited = DateTimeOffset.UtcNow;
-                    _storage.SaveFile(INVITESFILE, _activeInvitations.ToArray());
-                    _logger.Information("Sent invite to user {UserName}", toInvite.UserName);
-                }
-                else
-                {
-                    _logger.Warning("Could not send message because could not find user {UserName}", toInvite.UserName);
-                }
+            _logger.Information("Sending {NumberOfInvites} invites.", unsentInvitations.Count);
+            Invitation invitation;
+            while ((invitation = unsentInvitations.FirstOrDefault(i => i.Invited == null)) != null)
+            {
+                var message = invitation.CreateNewInvitationMessage();
+                await _core.SendMessage(message);
+                invitation.Invited = DateTimeOffset.UtcNow;
+                _storage.SaveFile(INVITESFILE, _activeInvitations.ToArray());
+                _logger.Information("Sent invite to user {UserName}", invitation.UserName);
             }
         }
+
         private async Task SendReminders()
         {
-            Invitation reminder;
-            while ((reminder =  
-                _activeInvitations.FirstOrDefault(i => 
-                    i.Invited != null                                                               //you have been invited
-                 && i.Invited.Value.AddHours(HOURSTOWAITBEFOREREMINDING)<DateTimeOffset.UtcNow      //more than x time ago
-                 && i.Response == Invitation.ResponseEnum.NoResponse                                //you have not replied
-                 && i.Reminded == null))   != null)                                                 //you have not yet been reminded
-            {
-                if (_core.UserCache.TryGetValue(reminder.UserId, out var user))
-                {
-                    var day = reminder.EventTime.LocalDateTime.ToString("dddd, MMMM dd");
-                    var time = reminder.EventTime.LocalDateTime.ToString("HH:mm");
-                    var message = new ResponseMessage()
-                    {
-                        Text =
-                            $"Hello @{user.Name}. I recently sent you an invitation for a social pizza event on *{day} at {time}*. \n" +
-                            "Since you haven't responded yet I'm sending you this friendly reminder. If you don't respond before tomorrow I will assume that you cannot make it and will invite someone else instead. \n" +
-                            "Please reply `yes` or `no` to indicate whether you can make it..",
+            var invitationsNotRespondedTo = _activeInvitations
+                .Where(i => i.Invited != null && i.Response == Invitation.ResponseEnum.NoResponse).ToList();
+            var reminders = invitationsNotRespondedTo
+                .Where(i => i.Reminded == null && i.Invited?.AddHours(HOURSTOWAITBEFOREREMINDING) < DateTimeOffset.UtcNow).ToList();
+            if (!reminders.Any())
+            { return; }
 
-                        ResponseType = ResponseType.DirectMessage,
-                        UserId = user.Id,
-                    };
-                    await _core.SendMessage(message);
-                    reminder.Reminded = DateTimeOffset.UtcNow;
-                    _storage.SaveFile(INVITESFILE, _activeInvitations.ToArray());
-                    _logger.Information("Sent reminder to user {UserName}", reminder.UserName);
-                }
-                else
-                {
-                    _logger.Warning("Could not send message because could not find user {UserName}", reminder.UserName);
-                }
+            _logger.Information("Sending {NumberOfReminders} reminders.", reminders.Count);
+
+            Invitation reminder;
+            while ((reminder = reminders.FirstOrDefault(i => i.Reminded == null)) != null)                                                 
+            {
+                var message = reminder.CreateReminderMessage();
+                await _core.SendMessage(message);
+                reminder.Reminded = DateTimeOffset.UtcNow;
+                _storage.SaveFile(INVITESFILE, _activeInvitations.ToArray());
+                _logger.Information("Sent reminder to user {UserName}", reminder.UserName);
             }
         }
+
+
+        private async Task CancelOldInvitations()
+        {
+            var invitationsNotRespondedTo = _activeInvitations
+                .Where(i => i.Invited != null && i.Response == Invitation.ResponseEnum.NoResponse).ToList();
+            var expirations = invitationsNotRespondedTo
+                .Where(i => i.Reminded?.AddHours(HOURSTOWAITBEFORECANCELLINGINVITATION) < DateTimeOffset.UtcNow).ToList();
+            if (!expirations.Any())
+            {   return; }
+
+            _logger.Information("Sending {NumberOfExpirations} expirations.", expirations.Count);
+
+            Invitation invitation;
+            while ((invitation = expirations.FirstOrDefault(i=> i.Response == Invitation.ResponseEnum.NoResponse)) != null)
+            {
+                var message = invitation.CreateExpiredInvitationMessage();
+                await _core.SendMessage(message);
+                invitation.Response = Invitation.ResponseEnum.Expired;
+                _activeInvitations.Remove(invitation);
+                await RaiseOnInvitationChanged(invitation);
+
+                _storage.SaveFile(INVITESFILE, _activeInvitations.ToArray());
+                _logger.Information("Sent expiration to user {UserName}", invitation.UserName);
+            }
+        }
+
+        
 
 
         public async Task HandleMessage(IncomingMessage incomingMessage)
@@ -164,8 +165,6 @@ namespace PizzaLight.Resources
 
         private async Task AcceptInvitation(IncomingMessage incomingMessage)
         {
-            var reply = incomingMessage.ReplyDirectlyToUser("Thank you. I will keep you informed when the other guests have accepted!");
-            await _core.SendMessage(reply);
 
             var invitation = _activeInvitations.Single(i => i.UserId == incomingMessage.UserId);
             invitation.Response = Invitation.ResponseEnum.Accepted;
@@ -173,19 +172,23 @@ namespace PizzaLight.Resources
 
             _storage.SaveFile(INVITESFILE, _activeInvitations.ToArray());
             _logger.Information("User {UserName} accepted the invitation for event.", incomingMessage.Username);
+
+            var reply = incomingMessage.ReplyDirectlyToUser("Thank you. I will keep you informed when the other guests have accepted!");
+            await _core.SendMessage(reply);
         }
 
         private async Task RejectInvitation(IncomingMessage incomingMessage)
         {
-            var reply = incomingMessage.ReplyDirectlyToUser("That is too bad, I will try to find someone else.");
-            await _core.SendMessage(reply);
-
             var invitation = _activeInvitations.Single(i => i.UserId == incomingMessage.UserId);
             invitation.Response= Invitation.ResponseEnum.Rejected;
+            _activeInvitations.Remove(invitation);
             await RaiseOnInvitationChanged(invitation);
 
             _storage.SaveFile(INVITESFILE, _activeInvitations.ToArray());
             _logger.Information("User {UserName} rejected the invitation for event.", incomingMessage.Username);
+
+            var reply = incomingMessage.ReplyDirectlyToUser("That is too bad, I will try to find someone else.");
+            await _core.SendMessage(reply);
         }
 
 
@@ -206,6 +209,58 @@ namespace PizzaLight.Resources
                     _logger.Error(ex, "Error Raising OnAcceptedInvitation.");
                 }
             }
+        }
+    }
+
+    public static class ResponseMessageExtensions
+    {
+        public static ResponseMessage CreateNewInvitationMessage(this Invitation invitation)
+        {
+            var day = invitation.EventTime.LocalDateTime.ToString("dddd, MMMM dd");
+            var time = invitation.EventTime.LocalDateTime.ToString("HH:mm");
+            var message = new ResponseMessage()
+            {
+                Text =
+                    $"Hello @{invitation.UserName}. \n" +
+                    $"Do you want to meet up for a social gathering and eat some tasty pizza with other colleagues on *{day} at {time}*? \n" +
+                    "Four other random colleagues have also been invited, and if you want to get to know them better all you have to do is reply yes if you want to accept this invitation or no if you can't make it and I will invite someone else in your stead. \n" +
+                    "Please reply `yes` or `no`.",
+
+                ResponseType = ResponseType.DirectMessage,
+                UserId = invitation.UserId,
+            };
+            return message;
+        }
+        public static ResponseMessage CreateReminderMessage(this Invitation reminder)
+        {
+            var day = reminder.EventTime.LocalDateTime.ToString("dddd, MMMM dd");
+            var time = reminder.EventTime.LocalDateTime.ToString("HH:mm");
+            var message = new ResponseMessage()
+            {
+                Text =
+                    $"Hello @{reminder.UserName}. I recently sent you an invitation for a social pizza event on *{day} at {time}*. \n" +
+                    "Since you haven't responded yet I'm sending you this friendly reminder. If you don't respond before tomorrow I will assume that you cannot make it and will invite someone else instead. \n" +
+                    "Please reply `yes` or `no` to indicate whether you can make it..",
+
+                ResponseType = ResponseType.DirectMessage,
+                UserId = reminder.UserId,
+            };
+            return message;
+        }
+
+        public static ResponseMessage CreateExpiredInvitationMessage(this Invitation invitation)
+        {
+            var message = new ResponseMessage()
+            {
+                Text =
+                    $"Hello @{invitation.UserName}." +
+                    $"Sadly, you didn't respond to my invitation and I will now invite someone else instead." +
+                    $"Maybe we will have better luck sometime later.",
+
+                ResponseType = ResponseType.DirectMessage,
+                UserId = invitation.UserId,
+            };
+            return message;
         }
     }
 }
