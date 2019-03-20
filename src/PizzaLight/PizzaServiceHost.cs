@@ -38,7 +38,6 @@ namespace PizzaLight
             var startTasks = _resources.Select(r => r.Start());
             Task.WaitAll(startTasks.ToArray());
             _activityLog.Log($"{this.GetType().Name} is up and running.");
-            _logger.Information("Everything up and running.");
         }
 
         public void Stop()

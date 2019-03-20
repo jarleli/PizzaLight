@@ -1,9 +1,9 @@
 using Noobot.Core.MessagingPipeline.Response;
 using PizzaLight.Models;
 
-namespace PizzaLight.Resources
+namespace PizzaLight.Resources.ExtensionClasses
 {
-    public static class ResponseMessageExtensions
+    public static class InvitationMessageExtensiosn
     {
         public static ResponseMessage CreateNewInvitationMessage(this Invitation invitation)
         {

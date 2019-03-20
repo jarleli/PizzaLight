@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Noobot.Core.MessagingPipeline.Request;
 using PizzaLight.Infrastructure;
 using PizzaLight.Models;
+using PizzaLight.Resources.ExtensionClasses;
 using Serilog;
 using SlackConnector.Models;
 

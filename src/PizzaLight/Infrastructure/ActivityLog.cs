@@ -7,8 +7,8 @@ namespace PizzaLight.Infrastructure
     public class ActivityLog : IActivityLog
     {
         private readonly ILogger _logger;
-        private List<string> _activities;
-        private static object o = new object();
+        private readonly List<string> _activities;
+        private static readonly object o = new object();
 
         public ActivityLog(ILogger logger)
         {

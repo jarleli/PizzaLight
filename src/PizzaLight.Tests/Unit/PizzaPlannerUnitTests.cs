@@ -56,7 +56,7 @@ namespace PizzaLight.Tests.Unit
         [Test]
         public void GetPeopleToInviteReturnsRightNumberOfPeople()
         {
-            var result = _planner.GetPeopleToInvite(_channel, 2, new List<Person>());
+            var result = _planner.FindPeopleToInvite(_channel, 2, new List<Person>());
             Assert.That(result.Count == 2,"result.Count == 2");
             Assert.That(_userCache.Values.Any(u=>u.Name == result[0].UserName));
             Assert.That(_userCache.Values.Any(u=>u.Name == result[1].UserName));

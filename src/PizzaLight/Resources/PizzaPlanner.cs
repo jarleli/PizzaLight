@@ -1,12 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Noobot.Core.MessagingPipeline.Request;
 using Noobot.Core.MessagingPipeline.Response;
 using PizzaLight.Infrastructure;
 using PizzaLight.Models;
+using PizzaLight.Resources.ExtensionClasses;
+using SlackConnector.Models;
 using ILogger = Serilog.ILogger;
 
 namespace PizzaLight.Resources
@@ -22,6 +25,7 @@ namespace PizzaLight.Resources
 
         private IPizzaCore _core;
         private List<PizzaPlan> _acitveplans;
+        private Timer _timer;
 
         public List<PizzaPlan> PizzaPlans => _acitveplans;
 
@@ -41,11 +45,26 @@ namespace PizzaLight.Resources
             await _storage.Start();
             _acitveplans = _storage.ReadFile<PizzaPlan>(ACTIVEEVENTSFILE).ToList();
 
-            _pizzaInviter.OnInvitationChanged += InvitationChanged;
-            OnPlanChanged += PlanChanged;
+            _pizzaInviter.OnInvitationChanged += HandleInvitationChanged;
+            OnPlanChanged += HandlePlanChanged;
+
+            _timer = new Timer(async state => await FollowUpOnActivePizzaPlans(state), null, TimeSpan.FromSeconds(10), TimeSpan.FromMinutes(10));
 
             //må starte en scheduler som sjekker jevnlig om den skal lage ny plan
             await ScheduleNewEvents();
+        }
+
+        private async Task FollowUpOnActivePizzaPlans(object state)
+        {
+            try
+            {
+                await NominatePersonToMakeReservation();
+                await NominatePersonToHandleExpenses();
+            }
+            catch (Exception e)
+            {
+                _logger.Fatal(e, "Exception running 'FollowUpOnActivePizzaPlans'");
+            }
         }
 
 
@@ -64,19 +83,22 @@ namespace PizzaLight.Resources
             }
         }
 
+#pragma warning disable 1998
         private async Task ScheduleNewEvent()
+#pragma warning restore 1998
         {
             _logger.Debug("Creating new event...");
             
             var eventId = Guid.NewGuid().ToString();
             var timeOfEvent = GetTimeOfNextEvent();
-            var toInvite = GetPeopleToInvite(_config.RoomToInviteFrom, _config.InvitesPerEvent, new List<Person>());
+            var toInvite = FindPeopleToInvite(_config.RoomToInviteFrom, _config.InvitesPerEvent, new List<Person>());
 
             var newPlan = new PizzaPlan()
             {
                 Id = eventId,
                 TimeOfEvent = timeOfEvent,
                 Invited = toInvite.ToList(),
+                Channel = _config.RoomToInviteFrom
             };
             var inviteList = toInvite.Select(i => new Invitation()
             {
@@ -92,7 +114,7 @@ namespace PizzaLight.Resources
             _storage.SaveFile(ACTIVEEVENTSFILE, _acitveplans.ToArray());
         }
 
-        public List<Person> GetPeopleToInvite(string channelName, int targetGuestCount, IEnumerable<Person> ignoreUsers)
+        public List<Person> FindPeopleToInvite(string channelName, int targetGuestCount, IEnumerable<Person> ignoreUsers)
         {
             var channel = _core.SlackConnection.ConnectedHubs.Values.SingleOrDefault(r => r.Name == $"#{channelName}");
             if (channel == null)
@@ -100,23 +122,11 @@ namespace PizzaLight.Resources
                 _logger.Warning("No such room: ", channelName);
                 return new List<Person>();
             }
-            var inviteCandidates = _core.UserCache.Values.Where(u => channel.Members.Contains(u.Id)).Where(m => !m.IsBot).ToList();
-            inviteCandidates = inviteCandidates.Where(c => ignoreUsers.All(u => u.UserName != c.Name)).ToList();
-            //inviteCandidates = inviteCandidates.Where(c => c.Name == "jarlelin").ToList();
+            var channelMembers = _core.UserCache.Values.Where(u => channel.Members.Contains(u.Id)).Where(m => !m.IsBot);
+            var inviteCandidates = channelMembers.Where(c => ignoreUsers.All(u => u.UserName != c.Name)).ToList();
+            inviteCandidates = inviteCandidates.Where(c => c.Name == "jarlelin").ToList();
 
-            var random = new Random();
-            var numberOfCandidates = inviteCandidates.Count;
-            var numberToInvite = Math.Min(targetGuestCount, numberOfCandidates);
-            var inviteList = new List<Person>(numberToInvite);
-            for (int i = 0; i < numberToInvite; i++)
-            {
-                var randomPick = random.Next(0, numberOfCandidates);
-                var invite = inviteCandidates[randomPick];
-                inviteCandidates.Remove(invite);
-                numberOfCandidates--;
-                inviteList.Add(new Person(){UserName=invite.Name, UserId = invite.Id});
-            }
-            return inviteList;
+            return inviteCandidates.SelectListOfRandomPeople(targetGuestCount);
         }
 
         public DateTimeOffset GetTimeOfNextEvent()
@@ -131,7 +141,7 @@ namespace PizzaLight.Resources
             return targetDay.Date.AddHours(17);
         }
 
-        private async Task InvitationChanged(Invitation invitation)
+        private async Task HandleInvitationChanged(Invitation invitation)
         {
             try
             {
@@ -164,14 +174,14 @@ namespace PizzaLight.Resources
             }
         }
 
-        private async Task PlanChanged(PizzaPlan pizzaPlan)
+        private async Task HandlePlanChanged(PizzaPlan pizzaPlan)
         {
             var totalInvited = pizzaPlan.Accepted.Count + pizzaPlan.Invited.Count;
             if (totalInvited < _config.InvitesPerEvent)
             {
                 var ignoreUsers = pizzaPlan.Rejected.ToList();
                 ignoreUsers.AddRange(pizzaPlan.Accepted);
-                var newGuests = GetPeopleToInvite(_config.RoomToInviteFrom, _config.InvitesPerEvent-totalInvited, ignoreUsers);
+                var newGuests = FindPeopleToInvite(_config.RoomToInviteFrom, _config.InvitesPerEvent-totalInvited, ignoreUsers);
                 var inviteList = newGuests.Select(i => new Invitation()
                 {
                     EventId = pizzaPlan.Id,
@@ -200,27 +210,54 @@ namespace PizzaLight.Resources
 
         private async Task LockParticipants(PizzaPlan pizzaPlan)
         {
-            var participantlist = string.Join(",", pizzaPlan.Accepted.Select(a => $"@{a.UserName}"));
+            var participantlist = string.Join(", ", pizzaPlan.Accepted.Select(a => $"@{a.UserName}"));
             _activityLog.Log($"Locking pizza plan {pizzaPlan.Id} with  participants ({pizzaPlan.Accepted.Count}) {participantlist}");
 
             pizzaPlan.ParticipantsLocked = true;
-            var day = pizzaPlan.TimeOfEvent.LocalDateTime.ToString("dddd, MMMM dd");
-            var time = pizzaPlan.TimeOfEvent.LocalDateTime.ToString("HH:mm");
-            var text = $"Great news! This amazing group has accepted the invitation for a pizza date on *{day} at {time}* \n" +
-                       $"{participantlist} \n" +
-                       $"If you don't know them all yet, now is an excellent opportunity. Please have a fantatic time!";
 
             foreach (var person in pizzaPlan.Accepted)
             {
-                var message = new ResponseMessage()
-                {
-                    ResponseType = ResponseType.DirectMessage,
-                    UserId = person.UserId,
-                    Text = text,
-                };
+                var message = pizzaPlan.CreateParticipantsLockedResponseMessage(participantlist, person);
                 await _core.SendMessage(message);
             }
             _storage.SaveFile(ACTIVEEVENTSFILE, _acitveplans.ToArray());
+        }
+
+        private async Task NominatePersonToMakeReservation()
+        {
+            PizzaPlan pizzaPlan;
+            while((pizzaPlan = _acitveplans.FirstOrDefault(p=>p.ParticipantsLocked && p.PersonDesignatedToMakeReservation == null)) != null)
+            {
+                var candidates = _core.UserCache.Where(c => pizzaPlan.Accepted.Any(a => a.UserId == c.Key)).Select(c => c.Value).ToList();
+                candidates = candidates.Where(c=>c.Name != pizzaPlan.PersonDesignatedToHandleExpenses?.UserName).ToList();
+                var guest = candidates.SelectListOfRandomPeople(1).SingleOrDefault();
+                if (guest == null) return;
+
+                pizzaPlan.PersonDesignatedToMakeReservation = guest;
+                _storage.SaveFile(ACTIVEEVENTSFILE, _acitveplans.ToArray());
+                _activityLog.Log($"Chose {pizzaPlan?.PersonDesignatedToMakeReservation?.UserName} to make reservations for pizzaplan {pizzaPlan.Id}");
+
+                var message = pizzaPlan.CreateNewDesignateToMakeReservationMessage();
+                await _core.SendMessage(message);
+            }
+        }
+        private async Task NominatePersonToHandleExpenses()
+        {
+            PizzaPlan pizzaPlan;
+            while ((pizzaPlan = _acitveplans.FirstOrDefault(p => p.ParticipantsLocked && p.PersonDesignatedToHandleExpenses == null)) != null)
+            {
+                var candidates = _core.UserCache.Where(c => pizzaPlan.Accepted.Any(a => a.UserId == c.Key)).Select(c => c.Value).ToList();
+                candidates = candidates.Where(c => c.Name != pizzaPlan.PersonDesignatedToMakeReservation?.UserName).ToList();
+                var guest = candidates.SelectListOfRandomPeople(1).SingleOrDefault();
+                if (guest == null) return;
+
+                pizzaPlan.PersonDesignatedToHandleExpenses = guest;
+                _storage.SaveFile(ACTIVEEVENTSFILE, _acitveplans.ToArray());
+                _activityLog.Log($"Chose {pizzaPlan?.PersonDesignatedToHandleExpenses?.UserName} to handle expenses for pizzaplan {pizzaPlan.Id}");
+
+                var message = pizzaPlan.CreateNewDesignateToHandleExpensesMessage();
+                await _core.SendMessage(message);
+            }
         }
 
 
@@ -231,15 +268,7 @@ namespace PizzaLight.Resources
             var ev = OnPlanChanged;
             if (ev != null)
             {
-                try
-                {
-                    await ev(pizzaPlan);
-                }
-                catch (Exception ex
-                )
-                {
-                    _logger.Error(ex, "Error Raising InvitationChanged.");
-                }
+                 await ev(pizzaPlan);
             }
         }
 

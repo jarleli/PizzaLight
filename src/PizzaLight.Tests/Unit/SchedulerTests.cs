@@ -24,7 +24,9 @@ namespace PizzaLight.Tests.Unit
             Assert.That(i>= 3);
         }
 
+#pragma warning disable 1998
         private async Task DoSomething(object state)
+#pragma warning restore 1998
         {
             Console.WriteLine("Repetition " + i);
             if(i >= 3)
