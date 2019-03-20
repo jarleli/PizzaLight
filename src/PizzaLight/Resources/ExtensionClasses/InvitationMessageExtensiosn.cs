@@ -12,7 +12,7 @@ namespace PizzaLight.Resources.ExtensionClasses
             var message = new ResponseMessage()
             {
                 Text =
-                    $"Hello @{invitation.UserName}. \n" +
+                    $"Hello @{invitation.UserName} \n" +
                     $"Do you want to meet up for a social gathering and eat some tasty pizza with other colleagues on *{day} at {time}*? \n" +
                     "Four other random colleagues have also been invited, and if you want to get to know them better all you have to do is reply yes if you want to accept this invitation or no if you can't make it and I will invite someone else in your stead. \n" +
                     "Please reply `yes` or `no`.",
@@ -29,7 +29,8 @@ namespace PizzaLight.Resources.ExtensionClasses
             var message = new ResponseMessage()
             {
                 Text =
-                    $"Hello @{reminder.UserName}. I recently sent you an invitation for a social pizza event on *{day} at {time}*. \n" +
+                    $"Hello @{reminder.UserName} \n" +
+                    $"I recently sent you an invitation for a social pizza event on *{day} at {time}*. \n" +
                     "Since you haven't responded yet I'm sending you this friendly reminder. If you don't respond before tomorrow I will assume that you cannot make it and will invite someone else instead. \n" +
                     "Please reply `yes` or `no` to indicate whether you can make it..",
 
@@ -44,8 +45,8 @@ namespace PizzaLight.Resources.ExtensionClasses
             var message = new ResponseMessage()
             {
                 Text =
-                    $"Hello @{invitation.UserName}." +
-                    $"Sadly, you didn't respond to my invitation and I will now invite someone else instead." +
+                    $"Hello @{invitation.UserName} \n" +
+                    $"Sadly, you didn't respond to my invitation and I will now invite someone else instead. \n" +
                     $"Maybe we will have better luck sometime later.",
 
                 ResponseType = ResponseType.DirectMessage,

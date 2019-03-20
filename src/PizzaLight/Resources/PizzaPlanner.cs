@@ -170,7 +170,6 @@ namespace PizzaLight.Resources
             catch (Exception e)
             {
                 _logger.Error(e, "Unable to apply event InvitationChanged");
-                throw;
             }
         }
 
@@ -231,7 +230,11 @@ namespace PizzaLight.Resources
                 var candidates = _core.UserCache.Where(c => pizzaPlan.Accepted.Any(a => a.UserId == c.Key)).Select(c => c.Value).ToList();
                 candidates = candidates.Where(c=>c.Name != pizzaPlan.PersonDesignatedToHandleExpenses?.UserName).ToList();
                 var guest = candidates.SelectListOfRandomPeople(1).SingleOrDefault();
-                if (guest == null) return;
+                if (guest == null)
+                {
+                    _logger.Warning("No eligible candidates for making reservation.");
+                    return;
+                }
 
                 pizzaPlan.PersonDesignatedToMakeReservation = guest;
                 _storage.SaveFile(ACTIVEEVENTSFILE, _acitveplans.ToArray());
@@ -249,7 +252,11 @@ namespace PizzaLight.Resources
                 var candidates = _core.UserCache.Where(c => pizzaPlan.Accepted.Any(a => a.UserId == c.Key)).Select(c => c.Value).ToList();
                 candidates = candidates.Where(c => c.Name != pizzaPlan.PersonDesignatedToMakeReservation?.UserName).ToList();
                 var guest = candidates.SelectListOfRandomPeople(1).SingleOrDefault();
-                if (guest == null) return;
+                if (guest == null)
+                {
+                    _logger.Warning("No eligible candidates for handling expenses.");
+                    return;
+                }
 
                 pizzaPlan.PersonDesignatedToHandleExpenses = guest;
                 _storage.SaveFile(ACTIVEEVENTSFILE, _acitveplans.ToArray());

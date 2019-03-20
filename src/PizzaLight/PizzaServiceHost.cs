@@ -31,13 +31,22 @@ namespace PizzaLight
 
         public async Task Start()
         {
-            await _pizzaCore.Start();
-            _pizzaCore.AddMessageHandlerToPipeline(_inviter);
+            try
+            {
+                await _pizzaCore.Start();
+                _pizzaCore.AddMessageHandlerToPipeline(_inviter);
 
-            _resources = new List<IMustBeInitialized>(){ _inviter, _planner};
-            var startTasks = _resources.Select(r => r.Start());
-            Task.WaitAll(startTasks.ToArray());
-            _activityLog.Log($"{this.GetType().Name} is up and running.");
+                _resources = new List<IMustBeInitialized>() {_inviter, _planner};
+                var startTasks = _resources.Select(r => r.Start());
+                Task.WaitAll(startTasks.ToArray());
+                _activityLog.Log($"{this.GetType().Name} is up and running.");
+
+            }
+            catch (Exception e)
+            {
+                _logger.Fatal(e, "Error starting PizzaServiceHost.");
+                throw;
+            }
         }
 
         public void Stop()

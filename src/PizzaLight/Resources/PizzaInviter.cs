@@ -46,7 +46,7 @@ namespace PizzaLight.Resources
 
             await _storage.Start();
             _activeInvitations = _storage.ReadFile<Invitation>(INVITESFILE).ToList();
-            _timer = new Timer(async state => await SendInvitationsAndReminders(state), null, TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(60));
+            _timer = new Timer(async state => await FollowUpInvitesAndReminders(state), null, TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(60));
         }
 
         public async Task Stop()
@@ -56,11 +56,18 @@ namespace PizzaLight.Resources
             _logger.Information($"{this.GetType().Name} stopped succesfully.");
         }
 
-        private async Task SendInvitationsAndReminders(object state)
+        private async Task FollowUpInvitesAndReminders(object state)
         {
-            await SendInvites();
-            await SendReminders();
-            await CancelOldInvitations();
+            try
+            {
+                await SendInvites();
+                await SendReminders();
+                await CancelOldInvitations();
+            }
+            catch (Exception e)
+            {
+                _logger.Fatal(e, "Exception running 'FollowUpInvitesAndReminders'");
+            }
         }
 
         public void Invite(IEnumerable<Invitation> newInvites)
@@ -191,15 +198,7 @@ namespace PizzaLight.Resources
             var ev = OnInvitationChanged;
             if (ev != null)
             {
-                try
-                {
-                    await ev(invitation);
-                }
-                catch (Exception ex
-                )
-                {
-                    _logger.Error(ex, "Error Raising OnAcceptedInvitation.");
-                }
+                await ev(invitation);
             }
         }
     }
