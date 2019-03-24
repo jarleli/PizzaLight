@@ -177,11 +177,20 @@ namespace PizzaLight.Resources
             {
                 return;
             }
+
+            bool messageUnderstood = false;
             foreach (var resource in _messageHandlers)
             {
-                await resource.HandleMessage(incomingMessage);
+                if (await resource.HandleMessage(incomingMessage))
+                {
+                    messageUnderstood = true;
+                }
             }
-
+            if (messageUnderstood == false)
+            {
+                await SendMessage(incomingMessage.ReplyDirectlyToUser(
+                    "I'm sorry, I didn't catch that. If you have any further questions please direct them to #pizzalight."));
+            }
         }
 
         public async Task SendMessage(ResponseMessage responseMessage)
