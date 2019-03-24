@@ -15,9 +15,9 @@ namespace PizzaLight.Models
         public bool ParticipantsLocked { get; set; }
         public Person PersonDesignatedToMakeReservation { get; set; }
         public Person PersonDesignatedToHandleExpenses { get; set; }
-        public DateTimeOffset? Cancelled { get; set; }
         public DateTimeOffset? SentReminder { get; set; }
         public bool FinishedSuccessfully { get; set; }
+        public DateTimeOffset? Cancelled { get; set; }
     }
     public class Person
     {

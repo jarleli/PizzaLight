@@ -83,20 +83,25 @@ namespace PizzaLight.Resources
 
         private async Task ScheduleNewEvents()
         {
-            if (!_activePlans.Any())
+            var today = DateTimeOffset.UtcNow.Date;
+            var thisWeeksMonday = today.AddDays( - (int)today.DayOfWeek + 1);
+            thisWeeksMonday = today.DayOfWeek == DayOfWeek.Sunday ? thisWeeksMonday.AddDays(-7) : thisWeeksMonday;
+            var mondayInWeekAfterNext = thisWeeksMonday.AddDays(14);
+            
+            if (!_activePlans.Any(p => p.TimeOfEvent > mondayInWeekAfterNext && p.TimeOfEvent < mondayInWeekAfterNext.AddDays(7)))
             {
-                await ScheduleNewEvent();
+                await ScheduleNewEvent(mondayInWeekAfterNext);
             }
         }
 
 #pragma warning disable 1998
-        private async Task ScheduleNewEvent()
+        private async Task ScheduleNewEvent( DateTime mondayInWeekToScheduleEvent)
 #pragma warning restore 1998
         {
             _logger.Debug("Creating new event...");
             
             var eventId = Guid.NewGuid().ToString();
-            var timeOfEvent = GetTimeOfNextEvent();
+            var timeOfEvent = GetTimeOfNextEvent(mondayInWeekToScheduleEvent);
             var toInvite = FindPeopleToInvite(_config.RoomToInviteFrom, _config.InvitesPerEvent, new List<Person>());
 
             var newPlan = new PizzaPlan()
@@ -130,18 +135,20 @@ namespace PizzaLight.Resources
             }
             var channelMembers = _core.UserCache.Values.Where(u => channel.Members.Contains(u.Id)).Where(m => !m.IsBot);
             var inviteCandidates = channelMembers.Where(c => ignoreUsers.All(u => u.UserName != c.Name)).ToList();
-            inviteCandidates = inviteCandidates.Where(c => c.Name == "jarlelin").ToList();
+            //inviteCandidates = inviteCandidates.Where(c => c.Name == "jarlelin").ToList();
 
             return inviteCandidates.SelectListOfRandomPeople(targetGuestCount);
         }
 
-        public DateTimeOffset GetTimeOfNextEvent()
+        public DateTimeOffset GetTimeOfNextEvent(DateTime dateInWeekToScheduleEvent)
         {
-            //onsdag i uken etter neste - todo 
-            var today = DateTimeOffset.UtcNow;
-            var targetDay = today
-                .AddDays(- (int) today.DayOfWeek + 3)
-                .AddDays(14);
+            //Day of week for event
+            var random = new Random();
+            var dayOfWeekToHoldEvent = random.Next(2, 5); //tuesday through thursday
+
+            var targetDay = dateInWeekToScheduleEvent
+                .AddDays(-(int) dateInWeekToScheduleEvent.DayOfWeek)
+                .AddDays(dayOfWeekToHoldEvent);
 
             //at 17:00 
             return targetDay.Date.AddHours(17);
