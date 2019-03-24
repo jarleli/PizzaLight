@@ -11,7 +11,8 @@ namespace PizzaLight.Resources.ExtensionClasses
         {
             var day = pizzaPlan.TimeOfEvent.LocalDateTime.ToString("dddd, MMMM dd");
             var time = pizzaPlan.TimeOfEvent.LocalDateTime.ToString("HH:mm");
-            var text = $"Great news! This amazing group has accepted the invitation for a pizza date on *{day} at {time}* \n" +
+            var text = $"Great news! \n" +
+                       $"This amazing group of people has accepted the invitation for pizza on *{day} at {time}* \n" +
                        $"{participantlist} \n" +
                        $"If you don't know them all yet, now is an excellent opportunity. Please have a fantatic time!";
 

@@ -6,6 +6,7 @@ using Noobot.Core.MessagingPipeline.Request;
 using Noobot.Core.MessagingPipeline.Response;
 using PizzaLight.Infrastructure;
 using PizzaLight.NoobotInternals;
+using PizzaLight.Resources.ExtensionClasses;
 using Serilog;
 using SlackConnector;
 using SlackConnector.Models;
@@ -141,7 +142,6 @@ namespace PizzaLight.Resources
                     if (task.IsCompleted && !task.IsCanceled && !task.IsFaulted)
                     {
                         _logger.Information("SlackConnection restored.");
-                        //_container.GetPlugin<StatsPlugin>().IncrementState("ConnectionsRestored");
                     }
                     else
                     {
@@ -154,7 +154,7 @@ namespace PizzaLight.Resources
         public async Task MessageReceived(SlackMessage message)
         {
             _logger.Information("[Message found from '{FromUserName}']", message.User.Name);
-            _logger.Debug(message.Text);
+            _logger.Debug($"MSG: {message.Text.SafeSubstring(0, 50)}");
 
             var incomingMessage = new IncomingMessage
             {

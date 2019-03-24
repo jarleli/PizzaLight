@@ -5,6 +5,6 @@ namespace PizzaLight.Infrastructure
 {
     public interface IMessageHandler
     {
-        Task HandleMessage(IncomingMessage incomingMessage);
+        Task<bool> HandleMessage(IncomingMessage incomingMessage);
     }
 }

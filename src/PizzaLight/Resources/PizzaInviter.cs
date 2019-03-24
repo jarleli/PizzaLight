@@ -145,7 +145,7 @@ namespace PizzaLight.Resources
         
 
 
-        public async Task HandleMessage(IncomingMessage incomingMessage)
+        public async Task<bool> HandleMessage(IncomingMessage incomingMessage)
         {
             var existingInvitation = _activeInvitations.FirstOrDefault(inv => incomingMessage.UserId == inv.UserId);
             if (existingInvitation?.Response == Invitation.ResponseEnum.NoResponse)
@@ -153,12 +153,15 @@ namespace PizzaLight.Resources
                 if(new[] { "yes", "Yes", "YES", "Yes.", "Yes!"}.Contains(incomingMessage.FullText))
                 {
                     await AcceptInvitation(incomingMessage);
+                    return true;
                 }
                 if (new[] { "no", "No", "NO", "No.", "No!" }.Contains(incomingMessage.FullText))
                 {
                     await RejectInvitation(incomingMessage);
+                    return true;
                 }
             }
+            return false;
         }
 
         private async Task AcceptInvitation(IncomingMessage incomingMessage)
