@@ -66,7 +66,7 @@ namespace PizzaLight.Tests.Unit
         [Test]
         public void GetDayOfNextEvent_ReturnsSomeWeekDayInTheFuture()
         {
-            var dateTime = _planner.GetTimeOfNextEvent();
+            var dateTime = _planner.GetTimeOfNextEvent(DateTimeOffset.UtcNow.AddDays(7).Date);
             Assert.That(dateTime.DayOfWeek != DayOfWeek.Saturday);
             Assert.That(dateTime.DayOfWeek != DayOfWeek.Sunday);
             Assert.That(dateTime>DateTimeOffset.UtcNow);

@@ -13,9 +13,9 @@ namespace PizzaLight.Resources.ExtensionClasses
             {
                 var day = pizzaPlan.TimeOfEvent.LocalDateTime.ToString("dddd, MMMM dd");
                 var time = pizzaPlan.TimeOfEvent.LocalDateTime.ToString("HH:mm");
-                var participantlist = pizzaPlan.Accepted.GetStringListOfPeople();
+                var participantlist = pizzaPlan.Accepted.GetStringListOfPeople("@");
 
-                var text = $"Great news! \n" +
+                var text = $"*Great news!* \n" +
                            $"This amazing group of people has accepted the invitation for pizza on *{day} at {time}* \n" +
                            $"{participantlist} \n" +
                            $"If you don't know them all yet, now is an excellent opportunity. Please have a fantatic time!";
@@ -33,7 +33,7 @@ namespace PizzaLight.Resources.ExtensionClasses
         {
             var day = pizzaPlan.TimeOfEvent.LocalDateTime.ToString("dddd, MMMM dd");
             var time = pizzaPlan.TimeOfEvent.LocalDateTime.ToString("HH:mm");
-            var participantlist = pizzaPlan.Accepted.GetStringListOfPeople();
+            var participantlist = pizzaPlan.Accepted.GetStringListOfPeople("@");
 
             var text = $"Hello again, @{pizzaPlan.PersonDesignatedToMakeReservation.UserName} \n" +
                        $"I need someone to help me make a reservation at a suitable location for the upcoming pizza dinner planned on *{day} at {time}*.\n" +
@@ -52,7 +52,7 @@ namespace PizzaLight.Resources.ExtensionClasses
         {
             var day = pizzaPlan.TimeOfEvent.LocalDateTime.ToString("dddd, MMMM dd");
             var time = pizzaPlan.TimeOfEvent.LocalDateTime.ToString("HH:mm");
-            var participantlist = pizzaPlan.Accepted.GetStringListOfPeople();
+            var participantlist = pizzaPlan.Accepted.GetStringListOfPeople("@");
 
             var text = $"Hello again, @{pizzaPlan.PersonDesignatedToHandleExpenses.UserName} \n" +
                        $"I need someone to help me handle the expenses for the upcoming pizza dinner planned on *{day} at {time}*.\n" +
@@ -91,7 +91,7 @@ namespace PizzaLight.Resources.ExtensionClasses
         {
             var day = pizzaPlan.TimeOfEvent.LocalDateTime.ToString("dddd, MMMM dd");
             var time = pizzaPlan.TimeOfEvent.LocalDateTime.ToString("HH:mm");
-            var participantlist = pizzaPlan.Accepted.GetStringListOfPeople();
+            var participantlist = pizzaPlan.Accepted.GetStringListOfPeople("@");
 
             foreach (var person in pizzaPlan.Accepted)
             {
