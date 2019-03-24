@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using PizzaLight.Models;
 using SlackConnector.Models;
 
@@ -25,5 +26,20 @@ namespace PizzaLight.Resources.ExtensionClasses
             return list;
         }
 
+        public static string GetStringListOfPeople(this List<Person> input, string prefixNames = "")
+        {
+            if (input.Count == 0) return "";
+            if(input.Count == 1) return $"{prefixNames}{input.First().UserName}";
+            if(input.Count == 2) return $"{prefixNames}{input[0].UserName} and {prefixNames}{input[1].UserName}";
+
+            if (input.Count > 2)
+            {
+
+                var firstArray = input.GetRange(0, input.Count-1);
+                var part1 = string.Join(", ", firstArray.Select(a => $"{prefixNames}{a.UserName}"));
+                return $"{part1} and {prefixNames}{input.Last().UserName}";
+            }
+            throw new Exception("");
+        }
     }
 }
