@@ -18,8 +18,8 @@ namespace PizzaLight.Resources
     public class PizzaPlanner : IMustBeInitialized
     {
         // ReSharper disable InconsistentNaming
-        const string ACTIVEEVENTSFILE = "active plans";
-        const string OLDEVENTSFILE = "old plans";
+        const string ACTIVEEVENTSFILE = "activeplans";
+        const string OLDEVENTSFILE = "oldplans";
         const int DAYSBEFOREEVENTTOCANCEL = 5;
         const int HOURSBEFORETOREMIND = 47;
         // ReSharper restore InconsistentNaming
@@ -120,7 +120,7 @@ namespace PizzaLight.Resources
             }).ToList();
             _pizzaInviter.Invite(inviteList);
 
-            _activityLog.Log($"Created a new Pizza Plan for {inviteList.Count} participants.");
+            _activityLog.Log($"Created a new Pizza Plan {newPlan.Id} for {inviteList.Count} participants.");
             _activePlans.Add(newPlan);
             _storage.SaveFile(ACTIVEEVENTSFILE, _activePlans.ToArray());
         }

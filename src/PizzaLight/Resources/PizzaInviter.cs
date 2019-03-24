@@ -25,7 +25,7 @@ namespace PizzaLight.Resources
         private Timer _timer;
 
         // ReSharper disable InconsistentNaming
-        private const string INVITESFILE = "active invites";
+        private const string INVITESFILE = "activeinvites";
         private const int HOURSTOWAITBEFOREREMINDING = 23;
         private const int HOURSTOWAITBEFORECANCELLINGINVITATION = 25;
         // ReSharper restore InconsistentNaming

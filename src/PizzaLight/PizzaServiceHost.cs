@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -33,6 +34,17 @@ namespace PizzaLight
         {
             try
             {
+                //file cleanup - to be removed
+                if (File.Exists("data/active plans.json"))
+                {  File.Move("data/active plans.json", "data/activeplans.json");}
+
+                if(File.Exists("data/old plans.json"))
+                {  File.Move("data/old plans.json", "data/oldplans.json");}
+
+                if(File.Exists("data/active invites.json"))
+                {  File.Move("data/active invites.json", "data/activeinvites.json");}
+
+
                 await _pizzaCore.Start();
                 _pizzaCore.AddMessageHandlerToPipeline(_inviter);
 
