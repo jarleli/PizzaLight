@@ -1,5 +1,4 @@
-﻿using Noobot.Core.Configuration;
-
+﻿
 namespace PizzaLight.Infrastructure
 {
     public class BotConfig

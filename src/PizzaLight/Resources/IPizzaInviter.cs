@@ -8,7 +8,7 @@ namespace PizzaLight.Resources
     public interface IPizzaInviter: IMessageHandler, IMustBeInitialized
     {
         event PizzaInviter.InvitationChangedEventHandler OnInvitationChanged;
-
         void Invite(IEnumerable<Invitation> newInvites);
+        List<Invitation> OutstandingInvites { get; }
     }
 }

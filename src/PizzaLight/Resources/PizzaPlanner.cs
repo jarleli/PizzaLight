@@ -55,7 +55,7 @@ namespace PizzaLight.Resources
             _pizzaInviter.OnInvitationChanged += HandleInvitationChanged;
             OnPlanChanged += HandlePlanChanged;
 
-            _timer = new Timer(async state => await PizzaPlannerScheduler(state), null, TimeSpan.FromSeconds(10), TimeSpan.FromMinutes(1));
+            _timer = new Timer(async state => await PizzaPlannerScheduler(state), null, TimeSpan.FromSeconds(10), TimeSpan.FromMinutes(10));
         }
 
         private async Task PizzaPlannerScheduler(object state)
@@ -102,7 +102,8 @@ namespace PizzaLight.Resources
             
             var eventId = Guid.NewGuid().ToString();
             var timeOfEvent = GetTimeOfNextEvent(mondayInWeekToScheduleEvent);
-            var toInvite = FindPeopleToInvite(_config.RoomToInviteFrom, _config.InvitesPerEvent, new List<Person>());
+            var peopleToNotInviteThisTime = _pizzaInviter.OutstandingInvites.Select(i=>new Person(){UserName = i.UserName, UserId = i.UserId});
+            var toInvite = FindPeopleToInvite(_config.RoomToInviteFrom, _config.InvitesPerEvent, peopleToNotInviteThisTime);
 
             var newPlan = new PizzaPlan()
             {
@@ -135,7 +136,7 @@ namespace PizzaLight.Resources
             }
             var channelMembers = _core.UserCache.Values.Where(u => channel.Members.Contains(u.Id)).Where(m => !m.IsBot);
             var inviteCandidates = channelMembers.Where(c => ignoreUsers.All(u => u.UserName != c.Name)).ToList();
-            inviteCandidates = inviteCandidates.Where(c => c.Name == "jarlelin").ToList();
+            //inviteCandidates = inviteCandidates.Where(c => c.Name == "jarlelin").ToList();
 
             return inviteCandidates.SelectListOfRandomPeople(targetGuestCount);
         }

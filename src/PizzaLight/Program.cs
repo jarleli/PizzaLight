@@ -1,19 +1,13 @@
 ﻿using System;
-using System.Diagnostics;
-using System.DirectoryServices.AccountManagement;
 using System.IO;
-using Common.Logging;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Serilog;
 using Serilog.AspNetCore;
-using Serilog.Core;
 using Serilog.Events;
 using Serilog.Filters;
-using Serilog.Formatting.Compact;
-using Serilog.Formatting.Json;
 
 namespace PizzaLight
 {

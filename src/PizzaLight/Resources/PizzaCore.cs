@@ -48,7 +48,7 @@ namespace PizzaLight.Resources
                 {
                     if (!task.IsCompleted || task.IsFaulted || task.IsCanceled)
                     {
-                        _logger.Warning($"Error connecting to Slack: {task.Exception}");
+                        _logger.Error($"Error connecting to Slack: {task.Exception}");
                     }
                 }
             );

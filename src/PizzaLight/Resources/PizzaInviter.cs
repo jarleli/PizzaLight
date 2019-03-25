@@ -30,6 +30,7 @@ namespace PizzaLight.Resources
         private const int HOURSTOWAITBEFORECANCELLINGINVITATION = 25;
         // ReSharper restore InconsistentNaming
 
+        public List<Invitation> OutstandingInvites => _activeInvitations;
 
         public PizzaInviter(ILogger logger, IFileStorage storage, IPizzaCore core, IActivityLog activityLog)
         {
