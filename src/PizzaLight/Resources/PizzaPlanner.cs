@@ -134,7 +134,10 @@ namespace PizzaLight.Resources
                 _logger.Warning("No such room: ", channelName);
                 return new List<Person>();
             }
-            var channelMembers = _core.UserCache.Values.Where(u => channel.Members.Contains(u.Id)).Where(m => !m.IsBot);
+            var channelMembers = _core.UserCache.Values
+                .Where(u=> channel.Members.Contains(u.Id))
+                .Where(m=> ! m.IsBot)
+                .Where(m=> ! m.Deleted);
             var inviteCandidates = channelMembers.Where(c => ignoreUsers.All(u => u.UserName != c.Name)).ToList();
             //inviteCandidates = inviteCandidates.Where(c => c.Name == "jarlelin").ToList();
 

@@ -14,7 +14,7 @@ namespace PizzaLight.Resources.ExtensionClasses
                 Text =
                     $"Hello @{invitation.UserName} \n" +
                     $"Do you want to meet up for a social gathering and eat some tasty pizza with other colleagues on *{day} at {time}*? \n" +
-                    "Four other random colleagues have also been invited, and if you want to get to know them better all you have to do is reply yes if you want to accept this invitation or no if you can't make it and I will invite someone else in your stead. \n" +
+                    "Four other random colleagues from #oslo have also been invited, and if you want to get to know them better all you have to do is reply yes if you want to accept this invitation or no if you can't make it and I will invite someone else in your stead. \n" +
                     "Please reply `yes` or `no`.",
 
                 ResponseType = ResponseType.DirectMessage,
