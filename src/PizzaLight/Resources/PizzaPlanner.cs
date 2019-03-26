@@ -246,7 +246,7 @@ namespace PizzaLight.Resources
                 var guest = candidates.SelectListOfRandomPeople(1).SingleOrDefault();
                 if (guest == null)
                 {
-                    _logger.Warning("No eligible candidates for making reservation.");
+                    _logger.Warning($"No eligible candidates for making reservation {pizzaPlan.Id}.");
                     return;
                 }
 

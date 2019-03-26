@@ -75,7 +75,7 @@ namespace PizzaLight.Resources.ExtensionClasses
 
             foreach (var person in pizzaPlan.Accepted)
             {
-                var text = $"Hello again {person.UserName}. \n" +
+                var text = $"Hello again @{person.UserName}. \n" +
                            $"Unfortunately due to lack of interest the *pizza dinner on {day} at {time} will have to be cancelled.* \n " +
                            $"I'll make sure to invite you to another dinner at another time.";
                 yield return new ResponseMessage()
@@ -95,8 +95,8 @@ namespace PizzaLight.Resources.ExtensionClasses
 
             foreach (var person in pizzaPlan.Accepted)
             {
-                var text = $"Hello again {person.UserName}. \n" +
-                           $"I'm sending you this message to remind you that you have an upcoming *pizza dinner on *{day} at {time}* together with {participantlist} \n ";
+                var text = $"Hello again @{person.UserName}. \n" +
+                           $"I'm sending you this message to remind you that you have an upcoming *pizza dinner on {day} at {time}* together with {participantlist} \n ";
                            
                 yield return new ResponseMessage()
                 {

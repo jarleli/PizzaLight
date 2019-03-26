@@ -113,10 +113,8 @@ namespace PizzaLight.Resources
                 reminder.Reminded = DateTimeOffset.UtcNow;
                 _storage.SaveFile(INVITESFILE, _activeInvitations.ToArray());
                 _activityLog.Log($"Sent REMINDER to event {reminder.EventId} to user {reminder.UserName}");
-
             }
         }
-
 
         private async Task CancelOldInvitations()
         {
@@ -143,8 +141,6 @@ namespace PizzaLight.Resources
             }
         }
 
-        
-
 
         public async Task<bool> HandleMessage(IncomingMessage incomingMessage)
         {
@@ -156,9 +152,14 @@ namespace PizzaLight.Resources
                     await AcceptInvitation(incomingMessage);
                     return true;
                 }
-                if (new[] { "no", "No", "NO", "No.", "No!" }.Contains(incomingMessage.FullText))
+                else if (new[] {"no", "No", "NO", "No.", "No!"}.Contains(incomingMessage.FullText))
                 {
                     await RejectInvitation(incomingMessage);
+                    return true;
+                }
+                else
+                {
+                    await _core.SendMessage(incomingMessage.ReplyDirectlyToUser("I'm sorry, I didn't catch that. Did you mean to accept the pizza invitation? Please reply `yes` or `no`."));
                     return true;
                 }
             }

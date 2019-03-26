@@ -153,8 +153,13 @@ namespace PizzaLight.Resources
 
         public async Task MessageReceived(SlackMessage message)
         {
+            if (message.ChatHub.Type != SlackChatHubType.DM)
+            {
+                return;
+            }
+
             _logger.Information("[Message found from '{FromUserName}']", message.User.Name);
-            _logger.Debug($"MSG: {message.Text.SafeSubstring(0, 50)}");
+            _logger.Debug($"MSG: {message.Text.SafeSubstring(0, 90)}");
 
             var incomingMessage = new IncomingMessage
             {
@@ -170,13 +175,7 @@ namespace PizzaLight.Resources
                 BotId = SlackConnection.Self.Id,
                 BotIsMentioned = message.MentionsBot
             };
-
             incomingMessage.TargetedText = incomingMessage.GetTargetedText();
-
-            if (message.ChatHub.Type != SlackChatHubType.DM)
-            {
-                return;
-            }
 
             bool messageUnderstood = false;
             foreach (var resource in _messageHandlers)
@@ -213,8 +212,7 @@ namespace PizzaLight.Resources
                         //Attachments = GetAttachments(responseMessage.Attachments) 
                     };
 
-                    string textTrimmed = botMessage.Text.Length > 50 ? botMessage.Text.Substring(0, 50) + "..." : botMessage.Text;
-                    _logger.Information($"Sending message '{textTrimmed}'");
+                    _logger.Information($"Sending message '{botMessage.Text.SafeSubstring(0,90)}'");
                     await SlackConnection.Say(botMessage);
                 }
             }
