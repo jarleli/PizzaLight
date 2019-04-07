@@ -57,7 +57,7 @@ namespace PizzaLight
             var host = app.ApplicationServices.GetService<PizzaServiceHost>();
 
             applicationLifetime.ApplicationStarted.Register(async () => await host.Start());
-            applicationLifetime.ApplicationStopping.Register(host.Stop);
+            applicationLifetime.ApplicationStopping.Register(host.Stop);    
         }
     }
 }

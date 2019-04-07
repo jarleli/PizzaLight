@@ -35,6 +35,10 @@ namespace PizzaLight
             try
             {
                 await _pizzaCore.Start();
+                if (!_pizzaCore.SlackConnection?.IsConnected ?? true)
+                {
+                    throw new OperationCanceledException("Could not connect to slack.");
+                }
                 _pizzaCore.AddMessageHandlerToPipeline(_inviter);
 
                 _resources = new List<IMustBeInitialized>() {_inviter, _planner};

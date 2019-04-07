@@ -74,6 +74,10 @@ namespace PizzaLight
         {
             var loggerConfiguration = new LoggerConfiguration()
                 .WriteTo.Console();
+
+            loggerConfiguration
+                .WriteTo.File("data/logs/pizzabot_.log", rollOnFileSizeLimit : true, rollingInterval : RollingInterval.Day);
+
             loggerConfiguration.Enrich.FromLogContext();
             loggerConfiguration.Filter
                 .ByExcluding(e=> Matching.FromSource("Microsoft.AspNetCore")(e) && e.Level < LogEventLevel.Warning);
