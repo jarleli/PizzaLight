@@ -117,7 +117,7 @@ namespace PizzaLight.Resources
                 UserId = i.UserId,
                 UserName = i.UserName,
                 EventTime = timeOfEvent,
-                Room =newPlan.Channel,
+                Room = newPlan.Channel,
                 City = newPlan.City
             }).ToList();
             _pizzaInviter.Invite(inviteList);
@@ -204,7 +204,9 @@ namespace PizzaLight.Resources
                     EventId = pizzaPlan.Id,
                     UserId = i.UserId,
                     UserName = i.UserName,
-                    EventTime = pizzaPlan.TimeOfEvent
+                    EventTime = pizzaPlan.TimeOfEvent,
+                    Room = pizzaPlan.Channel,
+                    City = pizzaPlan.City
                 }).ToList();
                 if (!inviteList.Any())
                 {
