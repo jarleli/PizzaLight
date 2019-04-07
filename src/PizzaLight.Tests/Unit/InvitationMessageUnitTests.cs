@@ -8,7 +8,7 @@ using NUnit.Framework;
 namespace PizzaLight.Tests.Unit
 {
     [TestFixture]
-    public class InvitationMessageUnitTests
+    public class MessageTests
     {
         [Test]
         public void InvitationUsesCityInInvitationText()
@@ -21,6 +21,31 @@ namespace PizzaLight.Tests.Unit
             StringAssert.Contains("colleagues from " + invitation.Room, message.Text);
 
             Console.WriteLine(message.Text);
+        }
+
+        [Test]
+        public void ReservationMessageTest()
+        {
+            var pizzaplan = CreatePizzaPlan();
+            var message = pizzaplan.CreateNewDesignateToMakeReservationMessage();
+
+            Console.WriteLine(message.Text);
+            StringAssert.Contains(pizzaplan.PersonDesignatedToMakeReservation.UserName , message.Text);
+        }
+
+        [Test]
+        public void ExpensesMessageTest()
+        {
+            var pizzaplan = CreatePizzaPlan();
+            var message = pizzaplan.CreateNewDesignateToHandleExpensesMessage();
+
+            Console.WriteLine(message.Text);
+            StringAssert.Contains(pizzaplan.PersonDesignatedToHandleExpenses.UserName, message.Text);
+        }
+
+        private PizzaPlan CreatePizzaPlan()
+        {
+            return  new PizzaPlan() { TimeOfEvent = DateTimeOffset.Now, PersonDesignatedToMakeReservation = new Person { UserName = "user1" }, PersonDesignatedToHandleExpenses = new Person { UserName = "user2" } };
         }
     }
 }
