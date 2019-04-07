@@ -8,6 +8,7 @@ namespace PizzaLight.Models
     {
         public string Id { get; set; }
         public string Channel { get; set; }
+        public string City { get; internal set; }
         public DateTimeOffset TimeOfEvent { get; set; }
         public List<Person> Invited { get; set; } = new List<Person>();
         public List<Person> Accepted { get; set; } = new List<Person>();

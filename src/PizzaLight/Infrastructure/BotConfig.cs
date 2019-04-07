@@ -10,7 +10,14 @@ namespace PizzaLight.Infrastructure
         //public bool StatsEnabled { get; }
         //public bool AboutEnabled { get; }
 
-        public string RoomToInviteFrom { get; set; }
+        public PizzaRoom PizzaRoom { get; set; }
         public int InvitesPerEvent { get; set; }
+
+        
+    }
+    public class PizzaRoom
+    {
+        public string Room { get; set; }
+        public string City { get; set; }
     }
 }

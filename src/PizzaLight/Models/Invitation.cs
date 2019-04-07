@@ -15,6 +15,8 @@ namespace PizzaLight.Models
 
         [JsonConverter(typeof(StringEnumConverter))]
         public Invitation.ResponseEnum Response { get; set; }
+        public string Room { get; set; }
+        public string City { get; set; }
 
         public enum ResponseEnum
         {

@@ -94,30 +94,31 @@ namespace PizzaLight.Resources
             }
         }
 
-#pragma warning disable 1998
         private async Task ScheduleNewEvent( DateTime mondayInWeekToScheduleEvent)
-#pragma warning restore 1998
         {
             _logger.Debug("Creating new event...");
             
             var eventId = Guid.NewGuid().ToString();
             var timeOfEvent = GetTimeOfNextEvent(mondayInWeekToScheduleEvent);
             var peopleToNotInviteThisTime = _pizzaInviter.OutstandingInvites.Select(i=>new Person(){UserName = i.UserName, UserId = i.UserId});
-            var toInvite = FindPeopleToInvite(_config.RoomToInviteFrom, _config.InvitesPerEvent, peopleToNotInviteThisTime);
+            var toInvite = FindPeopleToInvite(_config.PizzaRoom.Room, _config.InvitesPerEvent, peopleToNotInviteThisTime);
 
             var newPlan = new PizzaPlan()
             {
                 Id = eventId,
                 TimeOfEvent = timeOfEvent,
                 Invited = toInvite.ToList(),
-                Channel = _config.RoomToInviteFrom
+                Channel = _config.PizzaRoom.Room,
+                City = _config.PizzaRoom.City
             };
             var inviteList = toInvite.Select(i => new Invitation()
             {
                 EventId = eventId,
                 UserId = i.UserId,
                 UserName = i.UserName,
-                EventTime = timeOfEvent
+                EventTime = timeOfEvent,
+                Room =newPlan.Channel,
+                City = newPlan.City
             }).ToList();
             _pizzaInviter.Invite(inviteList);
 
@@ -197,7 +198,7 @@ namespace PizzaLight.Resources
             {
                 var ignoreUsers = pizzaPlan.Rejected.ToList();
                 ignoreUsers.AddRange(pizzaPlan.Accepted);
-                var newGuests = FindPeopleToInvite(_config.RoomToInviteFrom, _config.InvitesPerEvent-totalInvited, ignoreUsers);
+                var newGuests = FindPeopleToInvite(_config.PizzaRoom.Room, _config.InvitesPerEvent-totalInvited, ignoreUsers);
                 var inviteList = newGuests.Select(i => new Invitation()
                 {
                     EventId = pizzaPlan.Id,
