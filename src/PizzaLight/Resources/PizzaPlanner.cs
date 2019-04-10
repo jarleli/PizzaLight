@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -198,6 +198,7 @@ namespace PizzaLight.Resources
             {
                 var ignoreUsers = pizzaPlan.Rejected.ToList();
                 ignoreUsers.AddRange(pizzaPlan.Accepted);
+                ignoreUsers.AddRange(_pizzaInviter.OutstandingInvites.Select(i => new Person() { UserName = i.UserName, UserId = i.UserId }));
                 var newGuests = FindPeopleToInvite(_config.PizzaRoom.Room, _config.InvitesPerEvent-totalInvited, ignoreUsers);
                 var inviteList = newGuests.Select(i => new Invitation()
                 {
