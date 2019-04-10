@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "PizzaLight": {
+      "commandName": "Project",
+      "commandLineArgs": "C:\\temp\\pizzalight\\data\\config\\apitoken.json"
+    }
+  }
+}

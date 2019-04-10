@@ -7,9 +7,9 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Newtonsoft.Json;
 using PizzaLight.Infrastructure;
 using PizzaLight.Resources;
-using IConfiguration = Microsoft.Extensions.Configuration.IConfiguration;
 
 namespace PizzaLight
 {
@@ -27,7 +27,9 @@ namespace PizzaLight
 
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_1);
+            services.AddMvc()
+                .SetCompatibilityVersion(CompatibilityVersion.Version_2_1)
+                .AddJsonOptions(options=> options.SerializerSettings.Formatting = Formatting.Indented);
             services.AddSingleton(Configuration.GetSection("Bot").Get<BotConfig>());
             services.AddSingleton<IFileStorage, JsonStorage>();
             services.AddSingleton<IActivityLog, ActivityLog>();
@@ -53,9 +55,7 @@ namespace PizzaLight
                 await context.Response.WriteAsync(message);
             });
 
-            var core = app.ApplicationServices.GetService<PizzaCore>();
             var host = app.ApplicationServices.GetService<PizzaServiceHost>();
-
             applicationLifetime.ApplicationStarted.Register(async () => await host.Start());
             applicationLifetime.ApplicationStopping.Register(host.Stop);    
         }

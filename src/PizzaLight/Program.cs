@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Linq;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -15,11 +16,11 @@ namespace PizzaLight
     {
         public static void Main(string[] args)
         {
-#if (DEBUG)
-            string configFile = @"C:\temp\pizzalight\data\config\apitoken.json";
-#elif (RELEASE)
             string configFile = @"data/config/apitoken.json";
-#endif
+            if (args.Any())
+            {
+                configFile = args[0];
+            }
 
             if (!File.Exists(configFile))
             {
