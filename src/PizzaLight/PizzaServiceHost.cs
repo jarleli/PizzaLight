@@ -40,7 +40,6 @@ namespace PizzaLight
                     throw new OperationCanceledException("Could not connect to slack.");
                 }
                 _pizzaCore.AddMessageHandlerToPipeline(_inviter);
-
                 _resources = new List<IMustBeInitialized>() {_inviter, _planner};
                 var startTasks = _resources.Select(r => r.Start());
                 Task.WaitAll(startTasks.ToArray());

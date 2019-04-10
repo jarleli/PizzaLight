@@ -34,12 +34,27 @@ namespace PizzaLight.Resources.ExtensionClasses
 
             if (input.Count > 2)
             {
-
                 var firstArray = input.GetRange(0, input.Count-1);
                 var part1 = string.Join(", ", firstArray.Select(a => $"{prefixNames}{a.UserName}"));
                 return $"{part1} and {prefixNames}{input.Last().UserName}";
             }
             throw new Exception("");
         }
+
+        public static string GetListOfFormattedUserId(this List<Person> input)
+        {
+            if (input.Count == 0) return "";
+            if (input.Count == 1) return $"{input.First().GetFormattedUserId()}";
+            if (input.Count == 2) return $"{input[0].GetFormattedUserId()} and {input[1].GetFormattedUserId()}";
+
+            if (input.Count > 2)
+            {
+                var firstArray = input.GetRange(0, input.Count - 1);
+                var part1 = string.Join(", ", firstArray.Select(a => $"{a.GetFormattedUserId()}"));
+                return $"{part1} and {input.Last().GetFormattedUserId()}";
+            }
+            throw new Exception("");
+        }
+
     }
 }

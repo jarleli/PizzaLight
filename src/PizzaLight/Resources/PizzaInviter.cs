@@ -19,6 +19,7 @@ namespace PizzaLight.Resources
     {
         private readonly IActivityLog _activityLog;
         private readonly ILogger _logger;
+        private readonly BotConfig _botConfig;
         private readonly IFileStorage _storage;
         private readonly IPizzaCore _core;
         private List<Invitation> _activeInvitations;
@@ -32,10 +33,11 @@ namespace PizzaLight.Resources
 
         public List<Invitation> OutstandingInvites => _activeInvitations;
 
-        public PizzaInviter(ILogger logger, IFileStorage storage, IPizzaCore core, IActivityLog activityLog)
+        public PizzaInviter(ILogger logger, BotConfig botConfig, IFileStorage storage, IPizzaCore core, IActivityLog activityLog)
         {
             _activityLog = activityLog ?? throw new ArgumentNullException(nameof(activityLog));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _botConfig = botConfig ?? throw new ArgumentNullException(nameof(botConfig));
             _storage = storage ?? throw new ArgumentNullException(nameof(storage));
             _core = core ?? throw new ArgumentNullException(nameof(core));
         }
@@ -47,7 +49,7 @@ namespace PizzaLight.Resources
 
             await _storage.Start();
             _activeInvitations = _storage.ReadFile<Invitation>(INVITESFILE).ToList();
-            _timer = new Timer(async state => await FollowUpInvitesAndReminders(state), null, TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(60));
+            _timer = new Timer(async state => await FollowUpInvitesAndReminders(state), null, TimeSpan.FromSeconds(10), TimeSpan.FromMinutes(10));
         }
 
         public async Task Stop()
@@ -87,7 +89,7 @@ namespace PizzaLight.Resources
             Invitation invitation;
             while ((invitation = unsentInvitations.FirstOrDefault(i => i.Invited == null)) != null)
             {
-                var message = invitation.CreateNewInvitationMessage();
+                var message = invitation.CreateNewInvitationMessage(_botConfig.BotRoom);
                 await _core.SendMessage(message);
                 invitation.Invited = DateTimeOffset.UtcNow;
                 _storage.SaveFile(INVITESFILE, _activeInvitations.ToArray());

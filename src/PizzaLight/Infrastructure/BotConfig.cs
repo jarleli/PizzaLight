@@ -6,14 +6,9 @@ namespace PizzaLight.Infrastructure
     {
         public string SlackApiKey { get; set; }
 
-        //public bool HelpEnabled { get; set; }
-        //public bool StatsEnabled { get; }
-        //public bool AboutEnabled { get; }
-
         public PizzaRoom PizzaRoom { get; set; }
         public int InvitesPerEvent { get; set; }
-
-        
+        public string BotRoom { get; set; }
     }
     public class PizzaRoom
     {

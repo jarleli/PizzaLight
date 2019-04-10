@@ -188,7 +188,7 @@ namespace PizzaLight.Resources
             if (messageUnderstood == false)
             {
                 await SendMessage(incomingMessage.ReplyDirectlyToUser(
-                    "I'm sorry, I didn't catch that. If you have any further questions please direct them to #pizzalight."));
+                    $"I'm sorry, I didn't catch that. If you have any further questions please direct them to #{_botConfig.BotRoom}."));
             }
         }
 

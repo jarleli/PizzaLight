@@ -13,7 +13,7 @@ namespace PizzaLight.Resources.ExtensionClasses
             {
                 var day = pizzaPlan.TimeOfEvent.LocalDateTime.ToString("dddd, MMMM dd");
                 var time = pizzaPlan.TimeOfEvent.LocalDateTime.ToString("HH:mm");
-                var participantlist = pizzaPlan.Accepted.GetStringListOfPeople("@");
+                var participantlist = pizzaPlan.Accepted.GetListOfFormattedUserId();
 
                 var text = $"*Great news!* \n" +
                            $"This amazing group of people has accepted the invitation for pizza on *{day} at {time}* \n" +
@@ -29,15 +29,33 @@ namespace PizzaLight.Resources.ExtensionClasses
                 yield return message;
             }
         }
-        public static ResponseMessage CreateNewDesignateToMakeReservationMessage(this PizzaPlan pizzaPlan)
+
+        public static ResponseMessage CreatePizzaRoomAnnouncementMessage(this PizzaPlan pizzaPlan, string botRoom)
         {
             var day = pizzaPlan.TimeOfEvent.LocalDateTime.ToString("dddd, MMMM dd");
             var time = pizzaPlan.TimeOfEvent.LocalDateTime.ToString("HH:mm");
-            var participantlist = pizzaPlan.Accepted.GetStringListOfPeople("@");
+            var participantlist = pizzaPlan.Accepted.GetListOfFormattedUserId();
+
+            var text = $"On *{day} at {time}*, {participantlist} will get together and eat some tasty pizza.\n" +
+                       $"{pizzaPlan.PersonDesignatedToMakeReservation.GetFormattedUserId()} will make a reservation for the group.\n" +
+                       $"{pizzaPlan.PersonDesignatedToHandleExpenses.GetFormattedUserId()} will expense the meal afterwards.\n" +
+                       $"All the rest of you have to do is show up and have a great time and get to know each other better.\n" +
+                       $"Maybe once you are done you can upload an image of you all enjoying yourselves?";
+
+            var message = ResponseMessage.ChannelMessage(botRoom, text, (Attachment) null, null);
+            
+            return message;
+        }
+
+        public static ResponseMessage CreateNewDesignateToMakeReservationMessage(this PizzaPlan pizzaPlan, string botRoom)
+        {
+            var day = pizzaPlan.TimeOfEvent.LocalDateTime.ToString("dddd, MMMM dd");
+            var time = pizzaPlan.TimeOfEvent.LocalDateTime.ToString("HH:mm");
+            var participantlist = pizzaPlan.Accepted.GetListOfFormattedUserId();
 
             var text = $"Hello again, @{pizzaPlan.PersonDesignatedToMakeReservation.UserName} \n" +
                        $"I need someone to help me make a reservation at a suitable location for the upcoming pizza dinner planned on *{day} at {time}*.\n" +
-                       $"I have chosen you for this honor and wish you the best of luck to find a suitable location and make the necessary arrangements. If you need help finding a venue or have any questions please head over to #pizzalight. \n" +
+                       $"I have chosen you for this honor and wish you the best of luck to find a suitable location and make the necessary arrangements. If you need help finding a venue or have any questions please head over to #{botRoom}. \n" +
                        $"Someone else has been chosen to pay for the event and handling the expensing part, all you have to do is to make a reservation. \n" +
                        $"Also remember to inform or invite the other participants once you have made the reservation. The other participants are {participantlist} \n" +
                        $"Thank you!";
@@ -49,17 +67,17 @@ namespace PizzaLight.Resources.ExtensionClasses
             };
         }
 
-        public static ResponseMessage CreateNewDesignateToHandleExpensesMessage(this PizzaPlan pizzaPlan)
+        public static ResponseMessage CreateNewDesignateToHandleExpensesMessage(this PizzaPlan pizzaPlan, string botRoom)
         {
             var day = pizzaPlan.TimeOfEvent.LocalDateTime.ToString("dddd, MMMM dd");
             var time = pizzaPlan.TimeOfEvent.LocalDateTime.ToString("HH:mm");
-            var participantlist = pizzaPlan.Accepted.GetStringListOfPeople("@");
+            var participantlist = pizzaPlan.Accepted.GetListOfFormattedUserId();
 
             var text = $"Hello again, @{pizzaPlan.PersonDesignatedToHandleExpenses.UserName} \n" +
                        $"I need someone to help me handle the expenses for the upcoming pizza dinner planned on *{day} at {time}*.\n" +
                        $"I have chosen you for this honor. What you have to do is pay the bill for the dinner and file for the expenses. Someone else will chose a venue and make a reservation, all you have to do is show up and be ready to pay. \n" +
-                       $"If you have any questions please ask someone else in your group or head over to #pizzalight .\n" +
-                       $"The other participants are {participantlist} \n" +
+                       $"If you have any questions please ask someone else in your group or head over to #{botRoom} .\n" +
+                       $"The participants are {participantlist} \n" +
                        $"Thank you!";
             return new ResponseMessage()
             {
@@ -92,7 +110,7 @@ namespace PizzaLight.Resources.ExtensionClasses
         {
             var day = pizzaPlan.TimeOfEvent.LocalDateTime.ToString("dddd, MMMM dd");
             var time = pizzaPlan.TimeOfEvent.LocalDateTime.ToString("HH:mm");
-            var participantlist = pizzaPlan.Accepted.GetStringListOfPeople("@");
+            var participantlist = pizzaPlan.Accepted.GetListOfFormattedUserId();
 
             foreach (var person in pizzaPlan.Accepted)
             {

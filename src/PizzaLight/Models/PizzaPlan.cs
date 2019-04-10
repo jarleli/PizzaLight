@@ -17,6 +17,7 @@ namespace PizzaLight.Models
         public Person PersonDesignatedToMakeReservation { get; set; }
         public Person PersonDesignatedToHandleExpenses { get; set; }
         public DateTimeOffset? SentReminder { get; set; }
+        public bool PizzaPlanAnnouncedInPizzaRoom { get; set; }
         public bool FinishedSuccessfully { get; set; }
         public DateTimeOffset? Cancelled { get; set; }
     }
@@ -24,5 +25,14 @@ namespace PizzaLight.Models
     {
         public string UserName { get; set; }
         public string UserId { get; set; }
+
+        public string GetFormattedUserId()
+        {
+            if (!string.IsNullOrEmpty(UserId))
+            {
+                return "<@" + UserId + ">";
+            }
+            return string.Empty;
+        }
     }
 }

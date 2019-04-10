@@ -5,7 +5,7 @@ namespace PizzaLight.Resources.ExtensionClasses
 {
     public static class InvitationMessageExtensiosn
     {
-        public static ResponseMessage CreateNewInvitationMessage(this Invitation invitation)
+        public static ResponseMessage CreateNewInvitationMessage(this Invitation invitation, string botRoom)
         {
             var day = invitation.EventTime.LocalDateTime.ToString("dddd, MMMM dd");
             var time = invitation.EventTime.LocalDateTime.ToString("HH:mm");
@@ -15,7 +15,7 @@ namespace PizzaLight.Resources.ExtensionClasses
                     $"Hello @{invitation.UserName} \n" +
                     $"Do you want to meet up for a social gathering and eat some tasty pizza with other colleagues in {invitation.City} on *{day} at {time}*? \n" +
                     $"Four other random colleagues from #{invitation.Room} have also been invited, and if you want to get to know them better all you have to do is reply yes if you want to accept this invitation or no if you can't make it and I will invite someone else in your stead. And don't worry, you will get a new chance in the future even if you can't make it this time.\n" +
-                    $"If you have any questions please direct them to #pizzalight and we will try to help. \n" +
+                    $"If you have any questions please direct them to #{botRoom} and we will try to help. \n" +
 
                     "Please reply `yes` or `no`.",
 
