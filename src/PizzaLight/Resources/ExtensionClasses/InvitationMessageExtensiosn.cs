@@ -33,7 +33,7 @@ namespace PizzaLight.Resources.ExtensionClasses
                 Text =
                     $"Hello @{reminder.UserName} \n" +
                     $"I recently sent you an invitation for a social pizza event on *{day} at {time}*. \n" +
-                    "Since you haven't responded yet I'm sending you this friendly reminder. If you don't respond before tomorrow I will assume that you cannot make it and will invite someone else instead. \n" +
+                    "Since you haven't responded yet I'm sending you this friendly reminder. If you don't respond promptly I will assume that you cannot make it and will invite someone else instead. \n" +
                     "Please reply `yes` or `no` to indicate whether you can make it..",
 
                 ResponseType = ResponseType.DirectMessage,
@@ -49,7 +49,7 @@ namespace PizzaLight.Resources.ExtensionClasses
                 Text =
                     $"Hello @{invitation.UserName} \n" +
                     $"Sadly, you didn't respond to my invitation and I will now invite someone else instead. \n" +
-                    $"Maybe we will have better luck sometime later.",
+                    $"Don't worry, I will try again sometime later. Maybe we will have better luck then.",
 
                 ResponseType = ResponseType.DirectMessage,
                 UserId = invitation.UserId,

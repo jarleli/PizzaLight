@@ -28,7 +28,7 @@ namespace PizzaLight.Resources
         // ReSharper disable InconsistentNaming
         private const string INVITESFILE = "activeinvites";
         private const int HOURSTOWAITBEFOREREMINDING = 23;
-        private const int HOURSTOWAITBEFORECANCELLINGINVITATION = 25;
+        private const int HOURSTOWAITBEFORECANCELLINGINVITATION = 4;
         // ReSharper restore InconsistentNaming
 
         public List<Invitation> OutstandingInvites => _activeInvitations;
@@ -106,7 +106,7 @@ namespace PizzaLight.Resources
             if (!reminders.Any())
             { return; }
 
-            _logger.Information("Sending {NumberOfReminders} reminders.", reminders.Count);
+            _logger.Debug("Sending {NumberOfReminders} reminders.", reminders.Count);
             Invitation reminder;
             while ((reminder = reminders.FirstOrDefault(i => i.Reminded == null)) != null)                                                 
             {

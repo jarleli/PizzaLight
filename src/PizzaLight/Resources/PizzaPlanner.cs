@@ -63,9 +63,9 @@ namespace PizzaLight.Resources
         {
             try
             {
+                await CancelEventIfNotEnoughParticipants();
                 await NominatePersonToMakeReservation();
                 await NominatePersonToHandleExpenses();
-                await CancelEventIfNotEnoughParticipants();
                 await RemindParticipantsOfEvent();
                 await ClosePizzaPlanAfterFinished();
                 await ScheduleNewEvents();
@@ -348,7 +348,7 @@ namespace PizzaLight.Resources
         {
             PizzaPlan pizzaPlan;
             var planFinished = _activePlans.Where(p => DateTimeOffset.UtcNow > p.TimeOfEvent ).ToList();
-            while ((pizzaPlan = planFinished.FirstOrDefault()) != null)
+            while ((pizzaPlan = planFinished.FirstOrDefault(p=> p.FinishedSuccessfully == false)) != null)
             {
                 _activePlans.Remove(pizzaPlan);
                 _storage.SaveFile(ACTIVEEVENTSFILE, _activePlans.ToArray());
