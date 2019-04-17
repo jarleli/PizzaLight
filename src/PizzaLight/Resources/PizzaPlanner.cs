@@ -63,7 +63,7 @@ namespace PizzaLight.Resources
         {
             try
             {
-                await CancelEventIfNotEnoughParticipants();
+                await CancelOrLockEventIfNotFullBeforeDeadline();
                 await NominatePersonToMakeReservation();
                 await NominatePersonToHandleExpenses();
                 await RemindParticipantsOfEvent();
@@ -308,21 +308,30 @@ namespace PizzaLight.Resources
             }
         }
 
-        private async Task CancelEventIfNotEnoughParticipants()
+        private async Task CancelOrLockEventIfNotFullBeforeDeadline()
         {
             PizzaPlan pizzaPlan;
-            while ((pizzaPlan = _activePlans.FirstOrDefault(p => p.Accepted.Count<4 && DateTimeOffset.UtcNow.AddDays(DAYSBEFOREEVENTTOCANCEL) > p.TimeOfEvent)) != null)
+            var plansOverDeadline = _activePlans.Where(p => DateTimeOffset.UtcNow.AddDays(DAYSBEFOREEVENTTOCANCEL) > p.TimeOfEvent).ToList();
+            while ((pizzaPlan = plansOverDeadline.FirstOrDefault(p => !p.ParticipantsLocked)) != null)
             {
-                var messages = pizzaPlan.CreateNewEventIsCancelledMessage();
-                foreach (var message in messages)
+                if (pizzaPlan.Accepted.Count < 4)
                 {
-                    await _core.SendMessage(message);
+                    var messages = pizzaPlan.CreateNewEventIsCancelledMessage();
+                    foreach (var message in messages)
+                    {
+                        await _core.SendMessage(message);
+                    }
+                    _activePlans.Remove(pizzaPlan);
+                    _storage.SaveFile(ACTIVEEVENTSFILE, _activePlans.ToArray());
+                    pizzaPlan.Cancelled = DateTimeOffset.UtcNow;
+                    await AddPlanToFinished(pizzaPlan);
+                    _activityLog.Log(
+                        $"Cancelling '{pizzaPlan.Id}' because only {pizzaPlan.Accepted.Count} had accepted");
                 }
-                _activePlans.Remove(pizzaPlan);
-                _storage.SaveFile(ACTIVEEVENTSFILE, _activePlans.ToArray());
-                pizzaPlan.Cancelled = DateTimeOffset.UtcNow;
-                await AddPlanToFinished(pizzaPlan);
-                _activityLog.Log($"Cancelling '{pizzaPlan.Id}' because only {pizzaPlan.Accepted.Count} had accepted");
+                else
+                {
+                    await LockParticipants(pizzaPlan);
+                }
             }
         }
 
