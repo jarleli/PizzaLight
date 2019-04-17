@@ -218,7 +218,7 @@ namespace PizzaLight.Resources
                 }
                 else
                 {
-                    _activityLog.Log($"Added {inviteList.Count} more guests to event '{pizzaPlan.Id}'");
+                    _logger.Debug("Added {InvitedCount} more guests to event '{PizzaPlanId}'", inviteList.Count, pizzaPlan.Id);
                 }
                 _pizzaInviter.Invite(inviteList);
                 pizzaPlan.Invited.AddRange(newGuests);
@@ -325,8 +325,7 @@ namespace PizzaLight.Resources
                     _storage.SaveFile(ACTIVEEVENTSFILE, _activePlans.ToArray());
                     pizzaPlan.Cancelled = DateTimeOffset.UtcNow;
                     await AddPlanToFinished(pizzaPlan);
-                    _activityLog.Log(
-                        $"Cancelling '{pizzaPlan.Id}' because only {pizzaPlan.Accepted.Count} had accepted");
+                    _activityLog.Log($"Cancelling '{pizzaPlan.Id}' because only {pizzaPlan.Accepted.Count} had accepted");
                 }
                 else
                 {

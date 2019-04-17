@@ -93,7 +93,7 @@ namespace PizzaLight.Resources
                 await _core.SendMessage(message);
                 invitation.Invited = DateTimeOffset.UtcNow;
                 _storage.SaveFile(INVITESFILE, _activeInvitations.ToArray());
-                _activityLog.Log($"Sent INVITE to event {invitation.EventId} to user {invitation.UserName}");
+                _activityLog.Log($"Sent INVITE to event '{invitation.EventId}' to user {invitation.UserName}");
             }
         }
 
@@ -114,7 +114,7 @@ namespace PizzaLight.Resources
                 await _core.SendMessage(message);
                 reminder.Reminded = DateTimeOffset.UtcNow;
                 _storage.SaveFile(INVITESFILE, _activeInvitations.ToArray());
-                _activityLog.Log($"Sent REMINDER to event {reminder.EventId} to user {reminder.UserName}");
+                _activityLog.Log($"Sent REMINDER to event '{reminder.EventId}' to user {reminder.UserName}");
             }
         }
 
@@ -139,7 +139,7 @@ namespace PizzaLight.Resources
                 await RaiseOnInvitationChanged(invitation);
 
                 _storage.SaveFile(INVITESFILE, _activeInvitations.ToArray());
-                _activityLog.Log($"Sent EXPIRATION to event {invitation.EventId} to user {invitation.UserName}");
+                _activityLog.Log($"Sent EXPIRATION to event '{invitation.EventId}' to user {invitation.UserName}");
             }
         }
 
@@ -175,7 +175,7 @@ namespace PizzaLight.Resources
 
             var invitation = _activeInvitations.Single(i => i.UserId == incomingMessage.UserId);
             invitation.Response = Invitation.ResponseEnum.Accepted;
-            _activityLog.Log($"User {incomingMessage.Username} accepted the invitation for event {invitation.EventId}");
+            _activityLog.Log($"User {incomingMessage.Username} ACCEPTED the invitation for event '{invitation.EventId}'");
             await RaiseOnInvitationChanged(invitation);
 
             _activeInvitations.Remove(invitation);
@@ -187,7 +187,7 @@ namespace PizzaLight.Resources
             var invitation = _activeInvitations.Single(i => i.UserId == incomingMessage.UserId);
             invitation.Response= Invitation.ResponseEnum.Rejected;
             _activeInvitations.Remove(invitation);
-            _activityLog.Log($"User {incomingMessage.Username} REJECTED the invitation for event {invitation.EventId}");
+            _activityLog.Log($"User {incomingMessage.Username} REJECTED the invitation for event '{invitation.EventId}'");
             await RaiseOnInvitationChanged(invitation);
 
             _activeInvitations.Remove(invitation);
