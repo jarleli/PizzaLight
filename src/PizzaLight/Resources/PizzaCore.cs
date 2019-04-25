@@ -286,6 +286,13 @@ namespace PizzaLight.Resources
             }
             else if (responseMessage.ResponseType == ResponseType.DirectMessage)
             {
+                var user = SlackConnection.UserCache[responseMessage.UserId];
+                if (user.Deleted)
+                {
+                    _logger.Warning("User {UsernName} is deactivated. Will skip sending message");
+                    return null;
+                }
+
                 if (string.IsNullOrEmpty(responseMessage.Channel))
                 {
                     chatHub = await GetUserChatHub(responseMessage.UserId);
