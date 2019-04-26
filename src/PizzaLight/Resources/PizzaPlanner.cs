@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Configuration;
+using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Threading;
@@ -50,11 +52,21 @@ namespace PizzaLight.Resources
         public async Task Start()
         {
             _logger.Debug("Starting Pizza Planner.");
+
+            if (string.IsNullOrEmpty(_config.PizzaRoom.City))
+                throw new ConfigurationErrorsException($"Config element cannot be null 'PizzaRoom.City'"); 
+
+            if (string.IsNullOrEmpty(_config.PizzaRoom.Room))
+                throw new ConfigurationErrorsException($"Config element cannot be null 'PizzaRoom.Room'");
+        
+            if(string.IsNullOrEmpty(_config.BotRoom))
+                throw new ConfigurationErrorsException($"Config element cannot be null 'BotRoom'");
+    
+
             await _storage.Start();
             _activePlans = _storage.ReadFile<PizzaPlan>(ACTIVEEVENTSFILE).ToList();
 
             _pizzaInviter.OnInvitationChanged += HandleInvitationChanged;
-            OnPlanChanged += HandlePlanChanged;
 
             _timer = new Timer(async state => await PizzaPlannerScheduler(state), null, TimeSpan.FromSeconds(10), TimeSpan.FromMinutes(10));
         }
@@ -70,6 +82,7 @@ namespace PizzaLight.Resources
                 await ClosePizzaPlanAfterFinished();
                 await ScheduleNewEvents();
                 await AnnouncePizzaPlanInPizzaRoom();
+                await HandlePlansWithMissingInvitations();
             }
             catch (Exception e)
             {
@@ -130,13 +143,12 @@ namespace PizzaLight.Resources
             _storage.SaveFile(ACTIVEEVENTSFILE, _activePlans.ToArray());
         }
 
-        public List<Person> FindPeopleToInvite(string channelName, int targetGuestCount, IEnumerable<Person> ignoreUsers)
+        public List<Person> FindPeopleToInvite(string pizzaRoom, int targetGuestCount, IEnumerable<Person> ignoreUsers)
         {
-            var channel = _core.SlackConnection.ConnectedHubs.Values.SingleOrDefault(r => r.Name == $"#{channelName}");
+            var channel = _core.SlackConnection.ConnectedHubs.Values.SingleOrDefault(r => r.Name == $"#{pizzaRoom}");
             if (channel == null)
             {
-                _logger.Warning("No such room: ", channelName);
-                return new List<Person>();
+                throw new Exception($"No such room to invite from: '{pizzaRoom}'");
             }
             var channelMembers = _core.UserCache.Values
                 .Where(u=> channel.Members.Contains(u.Id))
@@ -165,7 +177,11 @@ namespace PizzaLight.Resources
         {
             try
             {
-                var pizzaEvent = _activePlans.Single(e => e.Id == invitation.EventId);
+                var pizzaEvent = _activePlans.SingleOrDefault(e => e.Id == invitation.EventId);
+                if (pizzaEvent == null)
+                {
+                    throw new InvalidOperationException($"No active event with id {invitation.EventId}");
+                }
                 var person = pizzaEvent.Invited
                     .SingleOrDefault(i => i.UserName == invitation.UserName && invitation.Response != Invitation.ResponseEnum.NoResponse);
                 if (person == null)
@@ -185,7 +201,7 @@ namespace PizzaLight.Resources
                 }
 
                 _storage.SaveFile(ACTIVEEVENTSFILE, _activePlans.ToArray());
-                await RaiseOnOnPlanChanged(pizzaEvent);
+                //await RaiseOnOnPlanChanged(pizzaEvent);
             }
             catch (Exception e)
             {
@@ -193,7 +209,10 @@ namespace PizzaLight.Resources
             }
         }
 
-        private async Task HandlePlanChanged(PizzaPlan pizzaPlan)
+
+#pragma warning disable 1998
+        private async Task AddNewInvitationsToPlan(PizzaPlan pizzaPlan)
+#pragma warning restore 1998
         {
             var totalInvited = pizzaPlan.Accepted.Count + pizzaPlan.Invited.Count;
             if (totalInvited < _config.InvitesPerEvent)
@@ -208,7 +227,7 @@ namespace PizzaLight.Resources
                 }
                 else
                 {
-                    _logger.Debug("Added {InvitedCount} more guests to event '{PizzaPlanId}'", newGuests.Count, pizzaPlan.Id);
+                    _logger.Debug("Adding {InvitedCount} more guests to event '{PizzaPlanId}'", newGuests.Count, pizzaPlan.Id);
                 }
 
                 var inviteList = newGuests.Select(i => new Invitation()
@@ -225,11 +244,6 @@ namespace PizzaLight.Resources
                 pizzaPlan.Invited.AddRange(newGuests);
                 _storage.SaveFile(ACTIVEEVENTSFILE, _activePlans.ToArray());
             }
-
-            if (pizzaPlan.Accepted.Any() && !pizzaPlan.Invited.Any())
-            {
-                await LockParticipants(pizzaPlan);
-            }
         }
 
         private async Task LockParticipants(PizzaPlan pizzaPlan)
@@ -245,6 +259,15 @@ namespace PizzaLight.Resources
                 await _core.SendMessage(m);
             }
             _storage.SaveFile(ACTIVEEVENTSFILE, _activePlans.ToArray());
+        }
+
+        private async Task HandlePlansWithMissingInvitations()
+        {
+            PizzaPlan pizzaPlan;
+            while ((pizzaPlan =_activePlans.FirstOrDefault(p => p.Accepted.Count+p.Invited.Count <5)) != null)
+            {
+                await AddNewInvitationsToPlan(pizzaPlan);
+            }
         }
 
         private async Task NominatePersonToMakeReservation()
@@ -352,7 +375,6 @@ namespace PizzaLight.Resources
             }
         }
 
-
         private async Task ClosePizzaPlanAfterFinished()
         {
             PizzaPlan pizzaPlan;
@@ -376,18 +398,6 @@ namespace PizzaLight.Resources
             }
             oldPlans.Add(plan);
             _storage.SaveFile(OLDEVENTSFILE, oldPlans.ToArray());;
-        }
-
-
-        public delegate Task PlanChangedEventHandler(PizzaPlan pizzaPlan);
-        public event PlanChangedEventHandler OnPlanChanged;
-        private async Task RaiseOnOnPlanChanged(PizzaPlan pizzaPlan)
-        {
-            var ev = OnPlanChanged;
-            if (ev != null)
-            {
-                 await ev(pizzaPlan);
-            }
         }
 
     }
