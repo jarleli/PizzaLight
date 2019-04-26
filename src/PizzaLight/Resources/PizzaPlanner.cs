@@ -13,6 +13,7 @@ using Noobot.Core.MessagingPipeline.Response;
 using PizzaLight.Infrastructure;
 using PizzaLight.Models;
 using PizzaLight.Resources.ExtensionClasses;
+using SlackConnector;
 using SlackConnector.Models;
 using ILogger = Serilog.ILogger;
 
@@ -61,7 +62,15 @@ namespace PizzaLight.Resources
         
             if(string.IsNullOrEmpty(_config.BotRoom))
                 throw new ConfigurationErrorsException($"Config element cannot be null 'BotRoom'");
-    
+
+            var channelName = $"#{_config.PizzaRoom.Room}";
+            if (_core.SlackConnection.ConnectedChannel(channelName) == null)
+            {
+                //var newHub = await _core.SlackConnection.JoinChannel(_config.PizzaRoom.Room);
+                var message = $"Bot not in channel {_config.PizzaRoom.Room} and bots cannot join rooms on their own. Invite it!";
+                _activityLog.Log(message);
+                throw new InvalidOperationException(message);
+            }
 
             await _storage.Start();
             _activePlans = _storage.ReadFile<PizzaPlan>(ACTIVEEVENTSFILE).ToList();
@@ -145,7 +154,7 @@ namespace PizzaLight.Resources
 
         public List<Person> FindPeopleToInvite(string pizzaRoom, int targetGuestCount, IEnumerable<Person> ignoreUsers)
         {
-            var channel = _core.SlackConnection.ConnectedHubs.Values.SingleOrDefault(r => r.Name == $"#{pizzaRoom}");
+            var channel = _core.SlackConnection.ConnectedChannel( $"#{pizzaRoom}");
             if (channel == null)
             {
                 throw new Exception($"No such room to invite from: '{pizzaRoom}'");
