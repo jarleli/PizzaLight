@@ -112,8 +112,6 @@ namespace PizzaLight.Resources
 
         private void OnDisconnect()
         {
-            //StopPlugins();
-
             if (_isDisconnecting)
             {
                 _logger.Information("Disconnected.");
@@ -194,6 +192,11 @@ namespace PizzaLight.Resources
 
         public async Task SendMessage(ResponseMessage responseMessage)
         {
+            if (_isDisconnecting)
+            {
+                _logger.Warning("Trying to send message while disconnecting.");
+            }
+
             SlackChatHub chatHub = await GetChatHub(responseMessage);
 
             if (chatHub != null)
@@ -209,7 +212,6 @@ namespace PizzaLight.Resources
                     {
                         ChatHub = chatHub,
                         Text = responseMessage.Text,
-                        //Attachments = GetAttachments(responseMessage.Attachments) 
                     };
 
                     _logger.Information($"Sending message '{botMessage.Text.SafeSubstring(0,90)}'");
@@ -218,54 +220,9 @@ namespace PizzaLight.Resources
             }
             else
             {
-                _logger.Error($"Unable to find channel for message '{responseMessage.Text}'. Message not sent");
+                _logger.Error($"Unable to send message '{responseMessage.Text}'.");
             }
         }
-
-        //private IList<SlackAttachment> GetAttachments(List<Attachment> attachments)
-        //{
-        //    var slackAttachments = new List<SlackAttachment>();
-
-        //    if (attachments != null)
-        //    {
-        //        foreach (var attachment in attachments)
-        //        {
-        //            slackAttachments.Add(new SlackAttachment
-        //            {
-        //                Text = attachment.Text,
-        //                Title = attachment.Title,
-        //                Fallback = attachment.Fallback,
-        //                ImageUrl = attachment.ImageUrl,
-        //                ThumbUrl = attachment.ThumbUrl,
-        //                AuthorName = attachment.AuthorName,
-        //                ColorHex = attachment.Color,
-        //                Fields = GetAttachmentFields(attachment)
-        //            });
-        //        }
-        //    }
-        //    return slackAttachments;
-        //}
-        //private IList<SlackAttachmentField> GetAttachmentFields(Attachment attachment)
-        //{
-        //    var attachmentFields = new List<SlackAttachmentField>();
-
-        //    if (attachment?.AttachmentFields != null)
-        //    {
-        //        foreach (var attachmentField in attachment.AttachmentFields)
-        //        {
-        //            attachmentFields.Add(new SlackAttachmentField
-        //            {
-        //                Title = attachmentField.Title,
-        //                Value = attachmentField.Value,
-        //                IsShort = attachmentField.IsShort
-        //            });
-        //        }
-        //    }
-
-        //    return attachmentFields;
-        //}
-
-
 
         private string GetUsername(SlackMessage message)
         {

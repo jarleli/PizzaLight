@@ -73,11 +73,10 @@ namespace PizzaLight.Resources
             }
             catch (Exception e)
             {
+                _activityLog.Log($"ERROR: {e.Message}");
                 _logger.Fatal(e, "Exception running 'PizzaPlannerScheduler'");
             }
         }
-
-        
 
         public async Task Stop()
         {
@@ -369,6 +368,10 @@ namespace PizzaLight.Resources
         public async Task AddPlanToFinished(PizzaPlan plan)
         {
             var oldPlans= _storage.ReadFile<PizzaPlan>(OLDEVENTSFILE).ToList();
+            if (oldPlans.FirstOrDefault(p => p.Id == plan.Id) != null)
+            {
+                throw new InvalidOperationException($"Trying to add a finished pizza plan to old plans, but that pizza plan Id already exists {plan.Id}");
+            }
             oldPlans.Add(plan);
             _storage.SaveFile(OLDEVENTSFILE, oldPlans.ToArray());;
         }
