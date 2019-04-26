@@ -310,9 +310,9 @@ namespace PizzaLight.Resources
 
         private async Task CancelOrLockEventIfNotFullBeforeDeadline()
         {
-            PizzaPlan pizzaPlan;
             var plansOverDeadline = _activePlans.Where(p => DateTimeOffset.UtcNow.AddDays(DAYSBEFOREEVENTTOCANCEL) > p.TimeOfEvent).ToList();
-            while ((pizzaPlan = plansOverDeadline.FirstOrDefault(p => !p.ParticipantsLocked)) != null)
+            PizzaPlan pizzaPlan;
+            while ((pizzaPlan = plansOverDeadline.FirstOrDefault(p => !p.ParticipantsLocked && !p.Cancelled.HasValue)) != null)
             {
                 if (pizzaPlan.Accepted.Count < 4)
                 {
