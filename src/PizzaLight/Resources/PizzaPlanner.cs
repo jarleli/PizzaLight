@@ -19,10 +19,10 @@ namespace PizzaLight.Resources
     public class PizzaPlanner : IMustBeInitialized
     {
         // ReSharper disable InconsistentNaming
-        const string ACTIVEEVENTSFILE = "activeplans";
-        const string OLDEVENTSFILE = "oldplans";
-        const int DAYSBEFOREEVENTTOCANCEL = 5;
-        const int HOURSBEFORETOREMIND = 47;
+        public const string ACTIVEEVENTSFILE = "activeplans";
+        public const string OLDEVENTSFILE = "oldplans";
+        public const int DAYSBEFOREEVENTTOCANCEL = 5;
+        public const int HOURSBEFORETOREMIND = 47;
         // ReSharper restore InconsistentNaming
 
         private readonly IActivityLog _activityLog;
@@ -202,6 +202,15 @@ namespace PizzaLight.Resources
                 ignoreUsers.AddRange(pizzaPlan.Accepted);
                 ignoreUsers.AddRange(_pizzaInviter.OutstandingInvites.Select(i => new Person() { UserName = i.UserName, UserId = i.UserId }));
                 var newGuests = FindPeopleToInvite(_config.PizzaRoom.Room, _config.InvitesPerEvent-totalInvited, ignoreUsers);
+                if (!newGuests.Any())
+                {
+                    _logger.Information("Found no more eligible users to invite to event '{EventId}'.", pizzaPlan.Id);
+                }
+                else
+                {
+                    _logger.Debug("Added {InvitedCount} more guests to event '{PizzaPlanId}'", newGuests.Count, pizzaPlan.Id);
+                }
+
                 var inviteList = newGuests.Select(i => new Invitation()
                 {
                     EventId = pizzaPlan.Id,
@@ -211,14 +220,7 @@ namespace PizzaLight.Resources
                     Room = pizzaPlan.Channel,
                     City = pizzaPlan.City
                 }).ToList();
-                if (!inviteList.Any())
-                {
-                    _logger.Information("Found no more eligible users to invite to event '{EventId}'.", pizzaPlan.Id);
-                }
-                else
-                {
-                    _logger.Debug("Added {InvitedCount} more guests to event '{PizzaPlanId}'", inviteList.Count, pizzaPlan.Id);
-                }
+
                 _pizzaInviter.Invite(inviteList);
                 pizzaPlan.Invited.AddRange(newGuests);
                 _storage.SaveFile(ACTIVEEVENTSFILE, _activePlans.ToArray());
@@ -307,7 +309,7 @@ namespace PizzaLight.Resources
             }
         }
 
-        private async Task CancelOrLockEventIfNotFullBeforeDeadline()
+        public async Task CancelOrLockEventIfNotFullBeforeDeadline()
         {
             var plansOverDeadline = _activePlans.Where(p => DateTimeOffset.UtcNow.AddDays(DAYSBEFOREEVENTTOCANCEL) > p.TimeOfEvent).ToList();
             PizzaPlan pizzaPlan;

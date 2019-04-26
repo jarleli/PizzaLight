@@ -38,13 +38,8 @@ namespace PizzaLight.Tests.Unit
                 log.Log(i.ToString());
             }
             sw.Stop();
-            Assert.That(sw.ElapsedMilliseconds<10);
+            Assert.LessOrEqual(sw.ElapsedMilliseconds,50);
             Assert.That(log.Activities.Count==10);
         }
-
-
-
-
     }
-
 }
