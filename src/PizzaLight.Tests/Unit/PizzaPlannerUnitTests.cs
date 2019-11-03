@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -7,76 +6,40 @@ using Flurl.Util;
 using Moq;
 using Noobot.Core.MessagingPipeline.Response;
 using NUnit.Framework;
-using PizzaLight.Infrastructure;
 using PizzaLight.Models;
 using PizzaLight.Resources;
-using Serilog;
-using SlackConnector;
-using SlackConnector.Models;
+using PizzaLight.Tests.Harness;
 
 namespace PizzaLight.Tests.Unit
 {
     [TestFixture]
     public class PizzaPlannerUnitTests
     {
-        private Mock<IPizzaCore> _core;
-        private Mock<IPizzaInviter> _inviter;
-        private Mock<IFileStorage> _storage;
-        private Mock<ILogger> _logger;
-        private BotConfig _config;
-        private Mock<ISlackConnection> _connection;
-        private string _channel;
-        private ConcurrentDictionary<string, SlackUser> _userCache;
-        private Mock<IActivityLog> _activity;
-        private Dictionary<string, PizzaPlan[]> _inMemoryStorage;
+        private TestHarness _harness;
 
         [SetUp]
         public void Setup()
         {
-            _channel = "pizzalight";
-            _config = new BotConfig(){PizzaRoom = new PizzaRoom(){City = "city", Room = _channel },BotRoom = "botroom"};
-            _core = new Mock<IPizzaCore>();
-            _inviter = new Mock<IPizzaInviter>();
-            _logger = new Mock<ILogger>();
-            _activity = new Mock<IActivityLog>();
-            _connection = new Mock<ISlackConnection>();
-            _storage = new Mock<IFileStorage>();
-            _core.SetupGet(c => c.SlackConnection).Returns(_connection.Object);
-            var hubs = new ConcurrentDictionary<string, SlackChatHub>();
-            hubs.TryAdd(_channel, new SlackChatHub() {Id = "123", Name = "#"+_channel, Members = new[] { "id1", "id2", "id3" },Type = SlackChatHubType.Channel});
-            _connection.SetupGet(c => c.ConnectedHubs).Returns(hubs);
-
-            _inMemoryStorage = new Dictionary<string, PizzaPlan[]>();
-            _storage.Setup(s => s.ReadFile<PizzaPlan>(It.IsAny<string>()))
-                .Returns<string>((key) => _inMemoryStorage[key]);
-            _storage.Setup(s => s.SaveFile<PizzaPlan>(It.IsAny<string>(), It.IsAny<PizzaPlan[]>()))
-                .Callback<string, PizzaPlan[]>((key, plans) => _inMemoryStorage[key] = plans);
-
-            _userCache = new ConcurrentDictionary<string, SlackUser>();
-            _userCache.TryAdd("user1", new SlackUser() { Name = "user1", Id = "id1" });
-            _userCache.TryAdd("user2", new SlackUser() { Name = "user2", Id = "id2" });
-            _userCache.TryAdd("user3", new SlackUser() { Name = "user3", Id = "id3" });
-            _core.Setup(c => c.UserCache).Returns(_userCache);
-
+            _harness = TestHarness.CreateHarness();
+            //await _harness.Planner.Start();
+            //await _harness.Inviter.Start();
         }
 
         [Test]
         public void GetPeopleToInviteReturnsRightNumberOfPeople()
         {
-            var planner = new PizzaPlanner(_logger.Object, _config, _storage.Object, _inviter.Object, _core.Object, _activity.Object);
-
-            var result = planner.FindPeopleToInvite(_channel, 2, new List<Person>());
+            var cache = _harness.UserCache;
+            var result = _harness.Planner.FindPeopleToInvite(_harness.Config.PizzaRoom.Room, 2, new List<Person>());
             Assert.That(result.Count == 2,"result.Count == 2");
-            Assert.That(_userCache.Values.Any(u=>u.Name == result[0].UserName));
-            Assert.That(_userCache.Values.Any(u=>u.Name == result[1].UserName));
+            Assert.That(cache.Values.Any(u=>u.Name == result[0].UserName));
+            Assert.That(cache.Values.Any(u=>u.Name == result[1].UserName));
             Assert.That( result[0].UserName != result[1].UserName);
         }
 
         [Test]
         public void GetDayOfNextEvent_ReturnsSomeWeekDayInTheFuture()
         {
-            var planner = new PizzaPlanner(_logger.Object, _config, _storage.Object, _inviter.Object, _core.Object, _activity.Object);
-            var dateTime = planner.GetTimeOfNextEvent(DateTimeOffset.UtcNow.AddDays(7).Date);
+            var dateTime = _harness.Planner.GetTimeOfNextEvent(DateTimeOffset.UtcNow.AddDays(7).Date);
             Assert.That(dateTime.DayOfWeek != DayOfWeek.Saturday);
             Assert.That(dateTime.DayOfWeek != DayOfWeek.Sunday);
             Assert.That(dateTime>DateTimeOffset.UtcNow);
@@ -86,37 +49,33 @@ namespace PizzaLight.Tests.Unit
         [Test]
         public async Task UpcomingEventWithTooFewGuestsIsCancelled()
         {
-            var planner = new PizzaPlanner(_logger.Object, _config, _storage.Object, _inviter.Object, _core.Object, _activity.Object);
-            var actiePlans = new[]
+            _harness.HasUpcomingPizzaPlans(new[]
             {
                 new PizzaPlan()
                 {
                     Id = Bip39Words.WordGenerator.GetRandomWordString(3),
                     TimeOfEvent = DateTimeOffset.UtcNow.AddDays(3)
                 }
-            };
-            _inMemoryStorage[PizzaPlanner.ACTIVEEVENTSFILE] = actiePlans;
-            _inMemoryStorage[PizzaPlanner.OLDEVENTSFILE] = new PizzaPlan[] { };
+            });
 
-
-            await planner.Start();
-            planner.CancelOrLockEventIfNotFullBeforeDeadline().Wait();
+            await _harness.Planner.Start();
+            await _harness.Planner.CancelOrLockEventIfNotFullBeforeDeadline();
 
 
             //performs only one operation to change the plan
-            _storage.Verify(s=>s.SaveFile(PizzaPlanner.ACTIVEEVENTSFILE, It.IsAny<PizzaPlan[]>()),Times.Once);
-            _storage.Verify(s=>s.SaveFile(PizzaPlanner.OLDEVENTSFILE, It.IsAny<PizzaPlan[]>()),Times.Once);
-            _activity.Verify(s=>s.Log(It.IsAny<string>()), Times.Once);
+            
+            _harness.Storage.Verify(s=>s.SaveFile(PizzaPlanner.ACTIVEEVENTSFILE, It.IsAny<PizzaPlan[]>()), Times.Once);
+            _harness.Storage.Verify(s=>s.SaveFile(PizzaPlanner.OLDEVENTSFILE, It.IsAny<PizzaPlan[]>()), Times.Once);
+            _harness.Activity.Verify(s=>s.Log(It.IsAny<string>()), Times.Once);
 
-            Assert.That(_inMemoryStorage[PizzaPlanner.ACTIVEEVENTSFILE].Length == 0);
-            Assert.That(_inMemoryStorage[PizzaPlanner.OLDEVENTSFILE].Length == 1);
+            Assert.That(!_harness.ActivePizzaPlans.Any());
+            Assert.That(_harness.OldPizzaPlans.Length == 1);
         }
 
         [Test]
         public async Task UpcomingEventWithEnoughGuestsIsLockedIn()
         {
-            var planner = new PizzaPlanner(_logger.Object, _config, _storage.Object, _inviter.Object, _core.Object, _activity.Object);
-            var actiePlans = new[]
+            _harness.HasUpcomingPizzaPlans(new[]
             {
                 new PizzaPlan()
                 {
@@ -131,21 +90,19 @@ namespace PizzaLight.Tests.Unit
                     },
                     ParticipantsLocked = false
                 }
-            };
-            _inMemoryStorage[PizzaPlanner.ACTIVEEVENTSFILE] = actiePlans;
-            _inMemoryStorage[PizzaPlanner.OLDEVENTSFILE] = new PizzaPlan[] { };
+            });
 
+            await _harness.Planner.Start();
+            _harness.Planner.CancelOrLockEventIfNotFullBeforeDeadline().Wait();
 
-            await planner.Start();
-            planner.CancelOrLockEventIfNotFullBeforeDeadline().Wait();
+            _harness.Storage.Verify(s => s.SaveFile(PizzaPlanner.ACTIVEEVENTSFILE, It.IsAny<PizzaPlan[]>()), Times.Once);
+            _harness.Storage.Verify(s => s.SaveFile(PizzaPlanner.OLDEVENTSFILE, It.IsAny<PizzaPlan[]>()), Times.Never);
+            _harness.Core.Verify(s => s.SendMessage(It.IsAny<ResponseMessage>()), Times.Exactly(4));
+            _harness.Activity.Verify(s => s.Log(It.IsAny<string>()), Times.Once);
 
-            Assert.That(actiePlans.Single().ParticipantsLocked);
-            _storage.Verify(s => s.SaveFile(PizzaPlanner.ACTIVEEVENTSFILE, It.IsAny<PizzaPlan[]>()), Times.Once);
-            _core.Verify(s => s.SendMessage(It.IsAny<ResponseMessage>()), Times.Exactly(4));
-            _activity.Verify(s => s.Log(It.IsAny<string>()), Times.Once);
-
-            Assert.That(_inMemoryStorage[PizzaPlanner.ACTIVEEVENTSFILE].Length == 1);
-            Assert.That(_inMemoryStorage[PizzaPlanner.OLDEVENTSFILE].Length == 0);
+            Assert.That(_harness.ActivePizzaPlans.Length == 1);
+            Assert.That(_harness.ActivePizzaPlans.Single().ParticipantsLocked);
+            Assert.That(_harness.OldPizzaPlans.Length == 0);
         }
     }
 }

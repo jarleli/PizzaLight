@@ -26,7 +26,7 @@ namespace PizzaLight.Resources
         private Timer _timer;
 
         // ReSharper disable InconsistentNaming
-        private const string INVITESFILE = "activeinvites";
+        public const string INVITESFILE = "activeinvites";
         private const int HOURSTOWAITBEFOREREMINDING = 23;
         private const int HOURSTOWAITBEFORECANCELLINGINVITATION = 4;
         // ReSharper restore InconsistentNaming
@@ -49,7 +49,7 @@ namespace PizzaLight.Resources
 
             await _storage.Start();
             _activeInvitations = _storage.ReadFile<Invitation>(INVITESFILE).ToList();
-            _timer = new Timer(async state => await FollowUpInvitesAndReminders(state), null, TimeSpan.FromSeconds(10), TimeSpan.FromMinutes(10));
+            _timer = new Timer(async _ => await FollowUpInvitesAndReminders(), null, TimeSpan.FromSeconds(10), TimeSpan.FromMinutes(10));
         }
 
         public async Task Stop()
@@ -59,13 +59,13 @@ namespace PizzaLight.Resources
             _logger.Information($"{this.GetType().Name} stopped succesfully.");
         }
 
-        private async Task FollowUpInvitesAndReminders(object state)
+        public async Task FollowUpInvitesAndReminders()
         {
             try
             {
                 await SendInvites();
                 await SendReminders();
-                await CancelOldInvitations();
+                await CancelExpiredInvitations();
             }
             catch (Exception e)
             {
@@ -118,7 +118,7 @@ namespace PizzaLight.Resources
             }
         }
 
-        private async Task CancelOldInvitations()
+        private async Task CancelExpiredInvitations()
         {
             var invitationsNotRespondedTo = _activeInvitations
                 .Where(i => i.Invited != null && i.Response == Invitation.ResponseEnum.NoResponse).ToList();

@@ -77,10 +77,10 @@ namespace PizzaLight.Resources
 
             _pizzaInviter.OnInvitationChanged += HandleInvitationChanged;
 
-            _timer = new Timer(async state => await PizzaPlannerScheduler(state), null, TimeSpan.FromSeconds(10), TimeSpan.FromMinutes(10));
+            _timer = new Timer(async _ => await PizzaPlannerScheduler(), null, TimeSpan.FromSeconds(10), TimeSpan.FromMinutes(10));
         }
 
-        private async Task PizzaPlannerScheduler(object state)
+        public async Task PizzaPlannerScheduler()
         {
             try
             {
@@ -119,7 +119,9 @@ namespace PizzaLight.Resources
             }
         }
 
+#pragma warning disable 1998
         private async Task ScheduleNewEvent( DateTime mondayInWeekToScheduleEvent)
+#pragma warning restore 1998
         {
             _logger.Debug("Creating new event...");
             
@@ -182,7 +184,9 @@ namespace PizzaLight.Resources
             return targetDay.Date.AddHours(17);
         }
 
+#pragma warning disable 1998
         private async Task HandleInvitationChanged(Invitation invitation)
+#pragma warning restore 1998
         {
             try
             {
@@ -398,7 +402,9 @@ namespace PizzaLight.Resources
             }
         }
 
+#pragma warning disable 1998
         public async Task AddPlanToFinished(PizzaPlan plan)
+#pragma warning restore 1998
         {
             var oldPlans= _storage.ReadFile<PizzaPlan>(OLDEVENTSFILE).ToList();
             if (oldPlans.FirstOrDefault(p => p.Id == plan.Id) != null)
