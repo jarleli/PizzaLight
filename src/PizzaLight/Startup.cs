@@ -37,6 +37,7 @@ namespace PizzaLight
             services.AddSingleton<IPizzaInviter, PizzaInviter>();
             services.AddSingleton<IPizzaCore, PizzaCore>();
             services.AddSingleton<PizzaServiceHost>();
+            services.AddSingleton<Func<DateTimeOffset>>(()=> DateTimeOffset.UtcNow);
 
             var cts = new CancellationTokenSource();
             services.AddSingleton(cts);

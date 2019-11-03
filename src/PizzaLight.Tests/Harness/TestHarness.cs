@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
@@ -23,8 +24,10 @@ namespace PizzaLight.Tests.Harness
         //public string Channel;
         public ConcurrentDictionary<string, SlackUser> UserCache;
         public Mock<IActivityLog> Activity;
+        public Func<DateTimeOffset> FuncNow { get; set; }
+        public DateTimeOffset Now { get; set; } = new DateTimeOffset(2019, 06, 01, 12, 00, 00, 00, TimeSpan.Zero);
 
-        public Invitation[] LastSavedInvitationList { get; set; }
+        public Invitation[] InvitationList { get; set; }
         public PizzaPlan[] ActivePizzaPlans { get; set; }
         public PizzaPlan[] OldPizzaPlans { get; set; }
 
@@ -46,11 +49,12 @@ namespace PizzaLight.Tests.Harness
 
         public TestHarness()
         {
+            FuncNow = () => Now;
             Config = new BotConfig(){InvitesPerEvent = 5, PizzaRoom = new PizzaRoom(){City = "city", Room="testroom"},BotRoom = "botroom"};
             Core = new Mock<IPizzaCore>();
             Storage = new Mock<IFileStorage>();
             Storage.Setup(s => s.SaveFile< Invitation>(PizzaInviter.INVITESFILE, It.IsAny<Invitation[]>()))
-                .Callback<string, Invitation[]>((s,invites)=> LastSavedInvitationList = invites);
+                .Callback<string, Invitation[]>((s,invites)=> InvitationList = invites);
             Storage.Setup(s => s.SaveFile<PizzaPlan>(PizzaPlanner.ACTIVEEVENTSFILE, It.IsAny<PizzaPlan[]>()))
                 .Callback<string, PizzaPlan[]>((s, plans) => ActivePizzaPlans = plans);
             Storage.Setup(s => s.SaveFile<PizzaPlan>(PizzaPlanner.OLDEVENTSFILE, It.IsAny<PizzaPlan[]>()))
@@ -61,8 +65,8 @@ namespace PizzaLight.Tests.Harness
             Connection = new Mock<ISlackConnection>();
             Core.SetupGet(c => c.SlackConnection).Returns(Connection.Object);
 
-            Inviter = new PizzaInviter(Logger.Object, Config,Storage.Object, Core.Object,Activity.Object );
-            Planner = new PizzaPlanner(Logger.Object, Config, Storage.Object, Inviter, Core.Object, Activity.Object);
+            Inviter = new PizzaInviter(Logger.Object, Config,Storage.Object, Core.Object,Activity.Object , FuncNow);
+            Planner = new PizzaPlanner(Logger.Object, Config, Storage.Object, Inviter, Core.Object, Activity.Object, FuncNow);
         }
 
 
@@ -79,11 +83,11 @@ namespace PizzaLight.Tests.Harness
         public TestHarness WithFiveUsersInCache()
         {
             UserCache = new ConcurrentDictionary<string, SlackUser>();
-            UserCache.TryAdd("user1", new SlackUser() { Name = "user1", Id = "id1" });
-            UserCache.TryAdd("user2", new SlackUser() { Name = "user2", Id = "id2" });
-            UserCache.TryAdd("user3", new SlackUser() { Name = "user3", Id = "id3" });
-            UserCache.TryAdd("user4", new SlackUser() { Name = "user4", Id = "id4" });
-            UserCache.TryAdd("user5", new SlackUser() { Name = "user5", Id = "id5" });
+            for (int i = 0; i < 10; i++)
+            {
+                UserCache.TryAdd($"user{i}", new SlackUser() { Name = $"user{i}", Id = $"id{i}" });
+
+            }
             Core.Setup(c => c.UserCache).Returns(UserCache);
             return this;
         }
@@ -118,10 +122,22 @@ namespace PizzaLight.Tests.Harness
         public TestHarness WithFiveUnsentInvitations()
         {
             var invitations = Connection.Object.ConnectedHubs.Single().Value.Members
+                .Take(Config.InvitesPerEvent)
                 .Select(m => new Invitation() {EventId = "a b c", Room = Config.PizzaRoom.Room, UserId = m});
             Inviter.Invite(invitations);
             return this;
         }
 
+        public void Start()
+        {
+            Planner.Start().Wait();
+            Inviter.Start().Wait();
+        }
+
+        public void Tick()
+        {
+            Planner.PizzaPlannerLoopTick().Wait();
+            Inviter.PizzaInviterLoopTick().Wait();
+        }
     }
 }

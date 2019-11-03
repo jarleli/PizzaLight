@@ -39,10 +39,10 @@ namespace PizzaLight.Tests.Unit
         [Test]
         public void GetDayOfNextEvent_ReturnsSomeWeekDayInTheFuture()
         {
-            var dateTime = _harness.Planner.GetTimeOfNextEvent(DateTimeOffset.UtcNow.AddDays(7).Date);
+            var dateTime = _harness.Planner.GetTimeOfNextEvent(_harness.FuncNow().AddDays(7).Date);
             Assert.That(dateTime.DayOfWeek != DayOfWeek.Saturday);
             Assert.That(dateTime.DayOfWeek != DayOfWeek.Sunday);
-            Assert.That(dateTime>DateTimeOffset.UtcNow);
+            Assert.That(dateTime> _harness.FuncNow());
             Assert.That(dateTime.TimeOfDay>TimeSpan.FromHours(15));
         }
 
@@ -54,7 +54,7 @@ namespace PizzaLight.Tests.Unit
                 new PizzaPlan()
                 {
                     Id = Bip39Words.WordGenerator.GetRandomWordString(3),
-                    TimeOfEvent = DateTimeOffset.UtcNow.AddDays(3)
+                    TimeOfEvent = _harness.FuncNow().AddDays(3)
                 }
             });
 
@@ -80,7 +80,7 @@ namespace PizzaLight.Tests.Unit
                 new PizzaPlan()
                 {
                     Id = Bip39Words.WordGenerator.GetRandomWordString(3),
-                    TimeOfEvent = DateTimeOffset.UtcNow.AddDays(3),
+                    TimeOfEvent = _harness.FuncNow().AddDays(3),
                     Accepted = new  List<Person>(4)
                     {
                         new Person(){UserId = "a"},

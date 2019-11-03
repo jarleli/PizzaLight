@@ -29,6 +29,7 @@ namespace PizzaLight.Resources
         // ReSharper restore InconsistentNaming
 
         private readonly IActivityLog _activityLog;
+        private readonly Func<DateTimeOffset> _funcNow;
         private readonly ILogger _logger;
         private readonly IFileStorage _storage;
         private readonly IPizzaInviter _pizzaInviter;
@@ -40,9 +41,10 @@ namespace PizzaLight.Resources
 
         public List<PizzaPlan> PizzaPlans => _activePlans;
 
-        public PizzaPlanner(ILogger logger, BotConfig config, IFileStorage storage, IPizzaInviter pizzaInviter, IPizzaCore core, IActivityLog activityLog)
+        public PizzaPlanner(ILogger logger, BotConfig config, IFileStorage storage, IPizzaInviter pizzaInviter, IPizzaCore core, IActivityLog activityLog, Func<DateTimeOffset> funcNow)
         {
-            _activityLog = activityLog;
+            _activityLog = activityLog ?? throw new ArgumentNullException(nameof(activityLog));
+            _funcNow = funcNow ?? throw new ArgumentNullException(nameof(funcNow));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _storage = storage ?? throw new ArgumentNullException(nameof(storage));
             _pizzaInviter = pizzaInviter ?? throw new ArgumentNullException(nameof(pizzaInviter));
@@ -77,10 +79,10 @@ namespace PizzaLight.Resources
 
             _pizzaInviter.OnInvitationChanged += HandleInvitationChanged;
 
-            _timer = new Timer(async _ => await PizzaPlannerScheduler(), null, TimeSpan.FromSeconds(10), TimeSpan.FromMinutes(10));
+            _timer = new Timer(async _ => await PizzaPlannerLoopTick(), null, TimeSpan.FromSeconds(10), TimeSpan.FromMinutes(10));
         }
 
-        public async Task PizzaPlannerScheduler()
+        public async Task PizzaPlannerLoopTick()
         {
             try
             {
@@ -96,7 +98,7 @@ namespace PizzaLight.Resources
             catch (Exception e)
             {
                 _activityLog.Log($"ERROR: {e.Message}");
-                _logger.Fatal(e, "Exception running 'PizzaPlannerScheduler'");
+                _logger.Fatal(e, "Exception running 'PizzaPlannerLoopTick'");
             }
         }
 
@@ -108,7 +110,7 @@ namespace PizzaLight.Resources
 
         private async Task ScheduleNewEvents()
         {
-            var today = DateTimeOffset.UtcNow.Date;
+            var today = _funcNow().Date;
             var thisWeeksMonday = today.AddDays( - (int)today.DayOfWeek + 1);
             thisWeeksMonday = today.DayOfWeek == DayOfWeek.Sunday ? thisWeeksMonday.AddDays(-7) : thisWeeksMonday;
             var mondayInWeekAfterNext = thisWeeksMonday.AddDays(14);
@@ -276,10 +278,10 @@ namespace PizzaLight.Resources
 
         private async Task HandlePlansWithMissingInvitations()
         {
-            PizzaPlan pizzaPlan;
-            while ((pizzaPlan =_activePlans.FirstOrDefault(p => p.Accepted.Count+p.Invited.Count <5)) != null)
+            foreach (PizzaPlan plan in _activePlans.Where(p => p.Accepted.Count + p.Invited.Count < 5))
             {
-                await AddNewInvitationsToPlan(pizzaPlan);
+                await AddNewInvitationsToPlan(plan);
+
             }
         }
 
@@ -347,7 +349,7 @@ namespace PizzaLight.Resources
 
         public async Task CancelOrLockEventIfNotFullBeforeDeadline()
         {
-            var plansOverDeadline = _activePlans.Where(p => DateTimeOffset.UtcNow.AddDays(DAYSBEFOREEVENTTOCANCEL) > p.TimeOfEvent).ToList();
+            var plansOverDeadline = _activePlans.Where(p => _funcNow().AddDays(DAYSBEFOREEVENTTOCANCEL) > p.TimeOfEvent).ToList();
             PizzaPlan pizzaPlan;
             while ((pizzaPlan = plansOverDeadline.FirstOrDefault(p => !p.ParticipantsLocked && !p.Cancelled.HasValue)) != null)
             {
@@ -360,7 +362,7 @@ namespace PizzaLight.Resources
                     }
                     _activePlans.Remove(pizzaPlan);
                     _storage.SaveFile(ACTIVEEVENTSFILE, _activePlans.ToArray());
-                    pizzaPlan.Cancelled = DateTimeOffset.UtcNow;
+                    pizzaPlan.Cancelled = _funcNow();
                     await AddPlanToFinished(pizzaPlan);
                     _activityLog.Log($"Cancelling '{pizzaPlan.Id}' because only {pizzaPlan.Accepted.Count} had accepted");
                 }
@@ -374,7 +376,7 @@ namespace PizzaLight.Resources
         private async Task RemindParticipantsOfEvent()
         {
             PizzaPlan pizzaPlan;
-            var toRemind = _activePlans.Where(p => DateTimeOffset.UtcNow.AddHours(HOURSBEFORETOREMIND) > p.TimeOfEvent).ToList();
+            var toRemind = _activePlans.Where(p => _funcNow().AddHours(HOURSBEFORETOREMIND) > p.TimeOfEvent).ToList();
             while ((pizzaPlan = toRemind.FirstOrDefault(p=>p.SentReminder == null)) != null)
             {
                 var messages = pizzaPlan.CreateRemindParticipantsOfEvent();
@@ -383,7 +385,7 @@ namespace PizzaLight.Resources
                     await _core.SendMessage(message);
                 }
                 _activityLog.Log($"Sent reminders to guest of '{pizzaPlan.Id}' because it starts at {pizzaPlan.TimeOfEvent}");
-                pizzaPlan.SentReminder = DateTimeOffset.UtcNow;
+                pizzaPlan.SentReminder = _funcNow();
                 _storage.SaveFile(ACTIVEEVENTSFILE, _activePlans.ToArray());
             }
         }
@@ -391,7 +393,7 @@ namespace PizzaLight.Resources
         private async Task ClosePizzaPlanAfterFinished()
         {
             PizzaPlan pizzaPlan;
-            var planFinished = _activePlans.Where(p => DateTimeOffset.UtcNow > p.TimeOfEvent ).ToList();
+            var planFinished = _activePlans.Where(p => _funcNow() > p.TimeOfEvent ).ToList();
             while ((pizzaPlan = planFinished.FirstOrDefault(p=> p.FinishedSuccessfully == false)) != null)
             {
                 _activePlans.Remove(pizzaPlan);

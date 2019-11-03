@@ -17,6 +17,7 @@ namespace PizzaLight.Resources
     
     public class PizzaInviter : IPizzaInviter
     {
+        private readonly Func<DateTimeOffset> _funcNow;
         private readonly IActivityLog _activityLog;
         private readonly ILogger _logger;
         private readonly BotConfig _botConfig;
@@ -33,8 +34,9 @@ namespace PizzaLight.Resources
 
         public List<Invitation> OutstandingInvites => _activeInvitations;
 
-        public PizzaInviter(ILogger logger, BotConfig botConfig, IFileStorage storage, IPizzaCore core, IActivityLog activityLog)
+        public PizzaInviter(ILogger logger, BotConfig botConfig, IFileStorage storage, IPizzaCore core, IActivityLog activityLog, Func<DateTimeOffset> funcNow)
         {
+            _funcNow = funcNow ?? throw new ArgumentNullException(nameof(funcNow));
             _activityLog = activityLog ?? throw new ArgumentNullException(nameof(activityLog));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _botConfig = botConfig ?? throw new ArgumentNullException(nameof(botConfig));
@@ -49,7 +51,7 @@ namespace PizzaLight.Resources
 
             await _storage.Start();
             _activeInvitations = _storage.ReadFile<Invitation>(INVITESFILE).ToList();
-            _timer = new Timer(async _ => await FollowUpInvitesAndReminders(), null, TimeSpan.FromSeconds(10), TimeSpan.FromMinutes(10));
+            _timer = new Timer(async _ => await PizzaInviterLoopTick(), null, TimeSpan.FromSeconds(10), TimeSpan.FromMinutes(10));
         }
 
         public async Task Stop()
@@ -59,7 +61,7 @@ namespace PizzaLight.Resources
             _logger.Information($"{this.GetType().Name} stopped succesfully.");
         }
 
-        public async Task FollowUpInvitesAndReminders()
+        public async Task PizzaInviterLoopTick()
         {
             try
             {
@@ -69,7 +71,7 @@ namespace PizzaLight.Resources
             }
             catch (Exception e)
             {
-                _logger.Fatal(e, "Exception running 'FollowUpInvitesAndReminders'");
+                _logger.Fatal(e, "Exception running 'PizzaInviterLoopTick'");
             }
         }
 
@@ -91,7 +93,7 @@ namespace PizzaLight.Resources
             {
                 var message = invitation.CreateNewInvitationMessage(_botConfig.BotRoom);
                 await _core.SendMessage(message);
-                invitation.Invited = DateTimeOffset.UtcNow;
+                invitation.Invited = _funcNow();
                 _storage.SaveFile(INVITESFILE, _activeInvitations.ToArray());
                 _activityLog.Log($"Sent INVITE to event '{invitation.EventId}' to user {invitation.UserName}");
             }
@@ -102,7 +104,7 @@ namespace PizzaLight.Resources
             var invitationsNotRespondedTo = _activeInvitations
                 .Where(i => i.Invited != null && i.Response == Invitation.ResponseEnum.NoResponse).ToList();
             var reminders = invitationsNotRespondedTo
-                .Where(i => i.Reminded == null && i.Invited?.AddHours(HOURSTOWAITBEFOREREMINDING) < DateTimeOffset.UtcNow).ToList();
+                .Where(i => i.Reminded == null && i.Invited?.AddHours(HOURSTOWAITBEFOREREMINDING) < _funcNow()).ToList();
             if (!reminders.Any())
             { return; }
 
@@ -112,7 +114,7 @@ namespace PizzaLight.Resources
             {
                 var message = reminder.CreateReminderMessage();
                 await _core.SendMessage(message);
-                reminder.Reminded = DateTimeOffset.UtcNow;
+                reminder.Reminded = _funcNow();
                 _storage.SaveFile(INVITESFILE, _activeInvitations.ToArray());
                 _activityLog.Log($"Sent REMINDER to event '{reminder.EventId}' to user {reminder.UserName}");
             }
@@ -123,7 +125,7 @@ namespace PizzaLight.Resources
             var invitationsNotRespondedTo = _activeInvitations
                 .Where(i => i.Invited != null && i.Response == Invitation.ResponseEnum.NoResponse).ToList();
             var expirations = invitationsNotRespondedTo
-                .Where(i => i.Reminded?.AddHours(HOURSTOWAITBEFORECANCELLINGINVITATION) < DateTimeOffset.UtcNow).ToList();
+                .Where(i => i.Reminded?.AddHours(HOURSTOWAITBEFORECANCELLINGINVITATION) < _funcNow()).ToList();
             if (!expirations.Any())
             {   return; }
 

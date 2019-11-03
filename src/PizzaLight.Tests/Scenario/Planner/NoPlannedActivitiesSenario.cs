@@ -1,15 +1,12 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using Moq;
 using NUnit.Framework;
 using PizzaLight.Models;
 using PizzaLight.Resources;
 using PizzaLight.Tests.Harness;
-using PizzaLight.Tests.Unit;
-using Serilog.Core;
 
-namespace PizzaLight.Tests.Scenario
+namespace PizzaLight.Tests.Scenario.Planner
 {
     [TestFixture, Category("Unit")]
     public class NoPlannedActivitiesSenario
@@ -20,12 +17,10 @@ namespace PizzaLight.Tests.Scenario
         public void SetUp()
         {
             _harness = TestHarness.CreateHarness();
-            
-            _harness.Planner.Start().Wait();
-            _harness.Inviter.Start().Wait();
+            _harness.Start();
 
 
-            _harness.Planner.PizzaPlannerScheduler().Wait();
+            _harness.Planner.PizzaPlannerLoopTick().Wait();
             _harness.Logger.Verify(l=>l.Fatal(It.IsAny<Exception>(), It.IsAny<string>()), Times.Never);
         }
 
