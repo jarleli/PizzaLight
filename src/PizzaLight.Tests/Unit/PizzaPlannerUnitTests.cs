@@ -59,7 +59,7 @@ namespace PizzaLight.Tests.Unit
             });
 
             await _harness.Planner.Start();
-            await _harness.Planner.CancelOrLockEventIfNotFullBeforeDeadline();
+            await _harness.Planner.LockInPizzaPlansOrCancelOnesThatPassDeadline();
 
 
             //performs only one operation to change the plan
@@ -93,7 +93,7 @@ namespace PizzaLight.Tests.Unit
             });
 
             await _harness.Planner.Start();
-            _harness.Planner.CancelOrLockEventIfNotFullBeforeDeadline().Wait();
+            _harness.Planner.LockInPizzaPlansOrCancelOnesThatPassDeadline().Wait();
 
             _harness.Storage.Verify(s => s.SaveFile(PizzaPlanner.ACTIVEEVENTSFILE, It.IsAny<PizzaPlan[]>()), Times.Once);
             _harness.Storage.Verify(s => s.SaveFile(PizzaPlanner.OLDEVENTSFILE, It.IsAny<PizzaPlan[]>()), Times.Never);

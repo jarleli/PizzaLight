@@ -21,15 +21,11 @@ namespace PizzaLight.Tests.Scenario.Planner
 
             _harness.Start();
 
-
-            _harness.Planner.PizzaPlannerLoopTick().Wait();
-            _harness.Inviter.PizzaInviterLoopTick().Wait();
-            _harness.Logger.Verify(l => l.Fatal(It.IsAny<Exception>(), It.IsAny<string>()), Times.Never);
+            _harness.Tick();
             _harness.Now = _harness.Now.AddDays(4);
-            _harness.Planner.PizzaPlannerLoopTick().Wait();
-            _harness.Inviter.PizzaInviterLoopTick().Wait();
-            _harness.Logger.Verify(l => l.Fatal(It.IsAny<Exception>(), It.IsAny<string>()), Times.Never);
+            _harness.Tick();
 
+            _harness.Logger.Verify(l => l.Fatal(It.IsAny<Exception>(), It.IsAny<string>()), Times.Never);
         }
 
         [Test]

@@ -86,7 +86,7 @@ namespace PizzaLight.Resources
         {
             try
             {
-                await CancelOrLockEventIfNotFullBeforeDeadline();
+                await LockInPizzaPlansOrCancelOnesThatPassDeadline();
                 await NominatePersonToMakeReservation();
                 await NominatePersonToHandleExpenses();
                 await RemindParticipantsOfEvent();
@@ -106,6 +106,27 @@ namespace PizzaLight.Resources
         {
             await _storage.Stop();
             _logger.Information($"{this.GetType().Name} stopped succesfully.");
+        }
+        public async Task LockInPizzaPlansOrCancelOnesThatPassDeadline()
+        {
+            PizzaPlan pizzaPlan;
+            while ((pizzaPlan =_activePlans.SingleOrDefault(p => !p.ParticipantsLocked && p.Accepted.Count >= _config.InvitesPerEvent)) != null)
+            {
+                await LockParticipants(pizzaPlan);
+            }
+
+            var plansOverDeadline = _activePlans.Where(p => _funcNow().AddDays(DAYSBEFOREEVENTTOCANCEL) > p.TimeOfEvent).ToList();
+            while ((pizzaPlan = plansOverDeadline.FirstOrDefault(p => !p.ParticipantsLocked && !p.Cancelled.HasValue)) != null)
+            {
+                if (pizzaPlan.Accepted.Count < 4)
+                {
+                    await CancelPizzaPlan(pizzaPlan);
+                }
+                else
+                {
+                    await LockParticipants(pizzaPlan);
+                }
+            }
         }
 
         private async Task ScheduleNewEvents()
@@ -216,7 +237,6 @@ namespace PizzaLight.Resources
                 }
 
                 _storage.SaveFile(ACTIVEEVENTSFILE, _activePlans.ToArray());
-                //await RaiseOnOnPlanChanged(pizzaEvent);
             }
             catch (Exception e)
             {
@@ -334,38 +354,26 @@ namespace PizzaLight.Resources
             }
         }
 
-        public async Task CancelOrLockEventIfNotFullBeforeDeadline()
+        private async Task CancelPizzaPlan(PizzaPlan pizzaPlan)
         {
-            var plansOverDeadline = _activePlans.Where(p => _funcNow().AddDays(DAYSBEFOREEVENTTOCANCEL) > p.TimeOfEvent).ToList();
-            PizzaPlan pizzaPlan;
-            while ((pizzaPlan = plansOverDeadline.FirstOrDefault(p => !p.ParticipantsLocked && !p.Cancelled.HasValue)) != null)
+            var messages = pizzaPlan.CreateNewEventIsCancelledMessage();
+            foreach (var message in messages)
             {
-                if (pizzaPlan.Accepted.Count < 4)
-                {
-                    var messages = pizzaPlan.CreateNewEventIsCancelledMessage();
-                    foreach (var message in messages)
-                    {
-                        await _core.SendMessage(message);
-                    }
-                    _activePlans.Remove(pizzaPlan);
-                    _storage.SaveFile(ACTIVEEVENTSFILE, _activePlans.ToArray());
-                    pizzaPlan.Cancelled = _funcNow();
-                    await AddPlanToFinished(pizzaPlan);
-                    _activityLog.Log($"Cancelling '{pizzaPlan.Id}' because only {pizzaPlan.Accepted.Count} had accepted");
-                }
-                else
-                {
-                    await LockParticipants(pizzaPlan);
-                }
+                await _core.SendMessage(message);
             }
+            _activePlans.Remove(pizzaPlan);
+            _storage.SaveFile(ACTIVEEVENTSFILE, _activePlans.ToArray());
+            pizzaPlan.Cancelled = _funcNow();
+            await AddPlanToFinished(pizzaPlan);
+            _activityLog.Log($"Cancelling '{pizzaPlan.Id}' because only {pizzaPlan.Accepted.Count} had accepted");
         }
 
         private async Task LockParticipants(PizzaPlan pizzaPlan)
         {
+            pizzaPlan.ParticipantsLocked = true;
+
             var stringList = pizzaPlan.Accepted.GetStringListOfPeople();
             _activityLog.Log($"Locking pizza plan '{pizzaPlan.Id}' with  participants ({pizzaPlan.Accepted.Count}) {stringList}");
-
-            pizzaPlan.ParticipantsLocked = true;
 
             var messages = pizzaPlan.CreateParticipantsLockedResponseMessage();
             foreach (var m in messages)

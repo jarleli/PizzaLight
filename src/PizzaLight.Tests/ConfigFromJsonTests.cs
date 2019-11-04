@@ -16,7 +16,6 @@ namespace PizzaLight.Tests
         {
             var config = GetConfig();
             Assert.That(config.InvitesPerEvent != 0);
-            Assert.That(config.InvitesPerEvent is int);
         }
 
        
