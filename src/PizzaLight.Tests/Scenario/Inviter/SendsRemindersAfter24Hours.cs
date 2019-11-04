@@ -24,7 +24,7 @@ namespace PizzaLight.Tests.Scenario.Inviter
 
 
             _harness.Inviter.PizzaInviterLoopTick().Wait();
-            _harness.Core.Reset();
+            _harness.Core.Invocations.Clear();
 
             _harness.Now = _harness.Now.AddDays(2);
             _harness.Inviter.PizzaInviterLoopTick().Wait();

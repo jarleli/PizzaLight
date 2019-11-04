@@ -261,20 +261,7 @@ namespace PizzaLight.Resources
             }
         }
 
-        private async Task LockParticipants(PizzaPlan pizzaPlan)
-        {
-            var stringList = pizzaPlan.Accepted.GetStringListOfPeople();
-            _activityLog.Log($"Locking pizza plan '{pizzaPlan.Id}' with  participants ({pizzaPlan.Accepted.Count}) {stringList}");
-
-            pizzaPlan.ParticipantsLocked = true;
-
-            var messages = pizzaPlan.CreateParticipantsLockedResponseMessage();
-            foreach (var m in messages)
-            {
-                await _core.SendMessage(m);
-            }
-            _storage.SaveFile(ACTIVEEVENTSFILE, _activePlans.ToArray());
-        }
+    
 
         private async Task HandlePlansWithMissingInvitations()
         {
@@ -371,6 +358,21 @@ namespace PizzaLight.Resources
                     await LockParticipants(pizzaPlan);
                 }
             }
+        }
+
+        private async Task LockParticipants(PizzaPlan pizzaPlan)
+        {
+            var stringList = pizzaPlan.Accepted.GetStringListOfPeople();
+            _activityLog.Log($"Locking pizza plan '{pizzaPlan.Id}' with  participants ({pizzaPlan.Accepted.Count}) {stringList}");
+
+            pizzaPlan.ParticipantsLocked = true;
+
+            var messages = pizzaPlan.CreateParticipantsLockedResponseMessage();
+            foreach (var m in messages)
+            {
+                await _core.SendMessage(m);
+            }
+            _storage.SaveFile(ACTIVEEVENTSFILE, _activePlans.ToArray());
         }
 
         private async Task RemindParticipantsOfEvent()

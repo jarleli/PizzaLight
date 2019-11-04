@@ -36,7 +36,7 @@ namespace PizzaLight.Tests.Harness
         {
             var harness = new TestHarness();
             harness
-                .WithFiveUsersInCache()
+                .WithTenUsersInCache()
                 .AddChannels()
                 .HasEmptyListOfPlans()
                 .HasEmptyListOfOldPlans()
@@ -65,7 +65,7 @@ namespace PizzaLight.Tests.Harness
             Connection = new Mock<ISlackConnection>();
             Core.SetupGet(c => c.SlackConnection).Returns(Connection.Object);
 
-            Inviter = new PizzaInviter(Logger.Object, Config,Storage.Object, Core.Object,Activity.Object , FuncNow);
+            Inviter = new PizzaInviter(Logger.Object, Config,Storage.Object, Core.Object, Activity.Object , FuncNow);
             Planner = new PizzaPlanner(Logger.Object, Config, Storage.Object, Inviter, Core.Object, Activity.Object, FuncNow);
         }
 
@@ -80,12 +80,12 @@ namespace PizzaLight.Tests.Harness
             return this;
         }
 
-        public TestHarness WithFiveUsersInCache()
+        public TestHarness WithTenUsersInCache()
         {
             UserCache = new ConcurrentDictionary<string, SlackUser>();
             for (int i = 0; i < 10; i++)
             {
-                UserCache.TryAdd($"user{i}", new SlackUser() { Name = $"user{i}", Id = $"id{i}" });
+                UserCache.TryAdd($"id{i}", new SlackUser() { Name = $"user{i}", Id = $"id{i}" });
 
             }
             Core.Setup(c => c.UserCache).Returns(UserCache);
