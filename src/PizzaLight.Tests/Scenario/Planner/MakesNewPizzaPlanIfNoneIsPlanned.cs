@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using Moq;
+using Noobot.Core.MessagingPipeline.Response;
 using NUnit.Framework;
 using PizzaLight.Models;
 using PizzaLight.Resources;
@@ -9,7 +10,7 @@ using PizzaLight.Tests.Harness;
 namespace PizzaLight.Tests.Scenario.Planner
 {
     [TestFixture, Category("Unit")]
-    public class NoPlannedActivitiesSenario
+    public class MakesNewPizzaPlanIfNoneIsPlanned
     {
         private TestHarness _harness;
 
@@ -20,7 +21,7 @@ namespace PizzaLight.Tests.Scenario.Planner
             _harness.Start();
 
 
-            _harness.Planner.PizzaPlannerLoopTick().Wait();
+            _harness.Tick();
             _harness.Logger.Verify(l=>l.Fatal(It.IsAny<Exception>(), It.IsAny<string>()), Times.Never);
         }
 
@@ -32,10 +33,17 @@ namespace PizzaLight.Tests.Scenario.Planner
         }
 
         [Test]
-        public void InvitationsWereSentToNewActivity()
+        public void InvitationsWereSentToPotentialGuestsForNewPizzaPlan()
         {
             _harness.Storage.Verify(i => i.SaveFile(PizzaInviter.INVITESFILE, It.Is<Invitation[]>(l => l.Count() == _harness.Config.InvitesPerEvent)));
             Assert.AreEqual(5, _harness.InvitationList.Length);
+
+            _harness.Core.Verify(c => c.SendMessage(
+                    It.Is<ResponseMessage>(m 
+                        => m.Text.Contains("Do you want to meet up for a social gathering and eat some tasty pizza ")
+                        && _harness.InvitationList.Any(i=>i.UserId == m.UserId)
+                    )),Times.Exactly(5));
+
 
         }
     }

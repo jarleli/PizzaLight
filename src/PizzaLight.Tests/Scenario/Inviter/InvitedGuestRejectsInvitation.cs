@@ -10,7 +10,7 @@ using PizzaLight.Tests.Harness;
 namespace PizzaLight.Tests.Scenario.Inviter
 {
     [TestFixture, Category("Unit")]
-    public class GetsRefuseMessageForInvitation
+    public class InvitedGuestTurnsDownInvitation
     {
         private TestHarness _harness;
         private PizzaPlan _plan;
@@ -33,7 +33,8 @@ namespace PizzaLight.Tests.Scenario.Inviter
         public void UserIsListedAsRejcted()
         {
             Assert.IsNotNull(_plan.Rejected.SingleOrDefault(p => p.UserId == _userId));
-
+            Assert.IsNull(_plan.Invited.SingleOrDefault(p => p.UserId == _userId));
+            Assert.AreEqual(4, _plan.Invited.Count);
         }
 
         [Test]
@@ -42,18 +43,6 @@ namespace PizzaLight.Tests.Scenario.Inviter
             _harness.Core.Verify(c => c.SendMessage(
                 It.Is<ResponseMessage>(m => m.Text.Contains(
                     "That is too bad, I will try to find someone else."))));
-        }
-
-        [Test]
-        public void WillSendNewInviteToNewUserAfterTick()
-        {
-            Assert.AreEqual(4,_plan.Invited.Count);
-            Assert.AreEqual(1,_plan.Rejected.Count);
-
-            _harness.Tick();
-
-            Assert.AreEqual(5, _plan.Invited.Count);
-
         }
     }
 }
