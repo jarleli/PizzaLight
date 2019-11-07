@@ -86,11 +86,11 @@ namespace PizzaLight.Resources
         {
             try
             {
+                await ClosePizzaPlanAfterFinished();
                 await LockInPizzaPlansOrCancelOnesThatPassDeadline();
                 await NominatePersonToMakeReservation();
                 await NominatePersonToHandleExpenses();
                 await RemindParticipantsOfEvent();
-                await ClosePizzaPlanAfterFinished();
                 await ScheduleNewEvents();
                 await AnnouncePizzaPlanInPizzaRoom();
                 await HandlePlansWithMissingInvitations();
