@@ -18,7 +18,7 @@ namespace PizzaLight.Resources.ExtensionClasses
                 var text = $"*Great news!* \n" +
                            $"This amazing group of people has accepted the invitation for pizza on *{day} at {time}* \n" +
                            $"{participantlist} \n" +
-                           $"If you don't know them all yet, now is an excellent opportunity. Please have a fantatic time!";
+                           $"If you don't know them all yet, now is an excellent opportunity. Please have a fantastic time!";
 
                 var message = new ResponseMessage()
                 {
