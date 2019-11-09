@@ -7,7 +7,7 @@ using NUnit.Framework;
 
 namespace PizzaLight.Tests.Unit
 {
-    [TestFixture]
+    [TestFixture, Category("Unit")]
     public class MessageTests
     {
         [Test]

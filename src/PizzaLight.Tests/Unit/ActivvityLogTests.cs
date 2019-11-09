@@ -10,7 +10,7 @@ using Serilog;
 
 namespace PizzaLight.Tests.Unit
 {
-    [TestFixture]
+    [TestFixture, Category("Unit")]
 
     class ActivityLogTests
     {

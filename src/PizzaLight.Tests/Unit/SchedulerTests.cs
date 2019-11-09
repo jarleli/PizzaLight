@@ -6,7 +6,7 @@ using NUnit.Framework;
 
 namespace PizzaLight.Tests.Unit
 {
-    [TestFixture]
+    [TestFixture, Category("Unit")]
     public class SchedulerTests
     {
         private int i= 0;

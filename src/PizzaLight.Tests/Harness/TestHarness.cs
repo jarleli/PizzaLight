@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
+using System.Threading.Tasks;
 using Moq;
 using PizzaLight.Infrastructure;
 using PizzaLight.Models;
@@ -16,12 +18,14 @@ namespace PizzaLight.Tests.Harness
     {
         public Mock<IPizzaCore> Core;
         public PizzaInviter Inviter;
+        public PizzaPlanner Planner;
+        public OptOutHandler OptOut;
         public Mock<IFileStorage> Storage;
+
         public Mock<ILogger> Logger;
         public BotConfig Config;
-        public PizzaPlanner Planner;
         public Mock<ISlackConnection> Connection;
-        //public string Channel;
+        public Mock<IOptOutState> OptOutState;
         public ConcurrentDictionary<string, SlackUser> UserCache;
         public Mock<IActivityLog> Activity;
         public Func<DateTimeOffset> FuncNow { get; set; }
@@ -41,6 +45,8 @@ namespace PizzaLight.Tests.Harness
                 .HasEmptyListOfPlans()
                 .HasEmptyListOfOldPlans()
                 .HasNoOutstandingInvites()
+                .WithANewOptOutStateYouCanAddToAndRemoveFrom()
+                
                 ;
             return harness;
         }
@@ -62,9 +68,11 @@ namespace PizzaLight.Tests.Harness
 
             Logger = new Mock<ILogger>();
             Activity = new Mock<IActivityLog>();
+            OptOutState = new Mock<IOptOutState>();
             Connection = new Mock<ISlackConnection>();
             Core.SetupGet(c => c.SlackConnection).Returns(Connection.Object);
 
+            OptOut = new OptOutHandler(Logger.Object, Config, OptOutState.Object, Core.Object, Activity.Object, FuncNow);
             Inviter = new PizzaInviter(Logger.Object, Config,Storage.Object, Core.Object, Activity.Object , FuncNow);
             Planner = new PizzaPlanner(Logger.Object, Config, Storage.Object, Inviter, Core.Object, Activity.Object, FuncNow);
         }
@@ -103,6 +111,34 @@ namespace PizzaLight.Tests.Harness
         {
             Storage.Setup(s => s.ReadFile<PizzaPlan>(PizzaPlanner.OLDEVENTSFILE)).Returns(new PizzaPlan[0]);
             OldPizzaPlans = new PizzaPlan[0];
+            return this;
+        }
+        private TestHarness WithANewOptOutStateYouCanAddToAndRemoveFrom()
+        {
+            var channelList = new ConcurrentDictionary<string, ChannelState>();
+            OptOutState.SetupGet(s => s.ChannelList).Returns(channelList);
+
+            OptOutState.Setup(s=>s.AddUserToOptOutOfChannel(It.IsAny<string>(), It.IsAny<string>()))
+               .Callback<string, string>((user, chan) =>
+               {
+                   if (!channelList.ContainsKey(chan))
+                   {
+                       channelList.TryAdd(chan, new ChannelState());
+                   }
+                   channelList[chan].UsersThatHaveOptedOut.Add(user);
+               }).Returns(Task.CompletedTask);
+
+            OptOutState.Setup(s => s.RemoveUserFromOptOutOfChannel(It.IsAny<string>(), It.IsAny<string>()))
+                .Callback<string, string>((user, chan) =>
+                {
+                    if (!channelList.ContainsKey(chan))
+                    {
+                        channelList.TryAdd(chan, new ChannelState());
+                    }
+                    channelList[chan].UsersThatHaveOptedOut = new ConcurrentBag<string>( channelList[chan].UsersThatHaveOptedOut.Where(u=>u!=user));
+                }).Returns(Task.CompletedTask);
+
+
             return this;
         }
 

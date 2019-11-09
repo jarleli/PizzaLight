@@ -12,7 +12,7 @@ using PizzaLight.Tests.Harness;
 
 namespace PizzaLight.Tests.Unit
 {
-    [TestFixture]
+    [TestFixture, Category("Unit")]
     public class PizzaPlannerUnitTests
     {
         private TestHarness _harness;
