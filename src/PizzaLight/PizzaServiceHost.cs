@@ -16,11 +16,12 @@ namespace PizzaLight
         private readonly CancellationTokenSource _cts;
         private readonly IPizzaInviter _inviter;
         private readonly PizzaPlanner _planner;
+        private readonly IOptOutHandler _optOutHandler;
         private readonly ILogger _logger;
         private readonly IPizzaCore _pizzaCore;
         private List<IMustBeInitialized> _resources;
 
-        public PizzaServiceHost(ILogger logger, CancellationTokenSource cts, IPizzaCore pizzaCore, IPizzaInviter inviter, PizzaPlanner planner, IActivityLog activityLog)
+        public PizzaServiceHost(ILogger logger, CancellationTokenSource cts, IPizzaCore pizzaCore, IPizzaInviter inviter, PizzaPlanner planner, IOptOutHandler optOutHandler, IActivityLog activityLog)
         {
             _activityLog = activityLog ?? throw new ArgumentNullException(nameof(activityLog));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -28,6 +29,7 @@ namespace PizzaLight
             _pizzaCore = pizzaCore ?? throw new ArgumentNullException(nameof(pizzaCore));
             _inviter = inviter ?? throw new ArgumentNullException(nameof(inviter));
             _planner = planner ?? throw new ArgumentNullException(nameof(planner));
+            _optOutHandler = optOutHandler ?? throw new ArgumentNullException(nameof(optOutHandler));
         }
 
         public async Task Start()
@@ -39,8 +41,8 @@ namespace PizzaLight
                 {
                     throw new OperationCanceledException("Could not connect to slack.");
                 }
-                _pizzaCore.AddMessageHandlerToPipeline(_inviter);
-                _resources = new List<IMustBeInitialized>() {_inviter, _planner};
+                _pizzaCore.AddMessageHandlerToPipeline(_inviter, _optOutHandler);
+                _resources = new List<IMustBeInitialized>() {_inviter, _planner, _optOutHandler };
                 var startTasks = _resources.Select(r => r.Start());
                 Task.WaitAll(startTasks.ToArray());
                 _activityLog.Log($"{this.GetType().Name} is up and running.");

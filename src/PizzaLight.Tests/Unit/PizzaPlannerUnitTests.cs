@@ -21,8 +21,7 @@ namespace PizzaLight.Tests.Unit
         public void Setup()
         {
             _harness = TestHarness.CreateHarness();
-            //await _harness.Planner.Start();
-            //await _harness.Inviter.Start();
+            _harness.Start();
         }
 
         [Test]
@@ -64,8 +63,8 @@ namespace PizzaLight.Tests.Unit
 
             //performs only one operation to change the plan
             
-            _harness.Storage.Verify(s=>s.SaveFile(PizzaPlanner.ACTIVEEVENTSFILE, It.IsAny<PizzaPlan[]>()), Times.Once);
-            _harness.Storage.Verify(s=>s.SaveFile(PizzaPlanner.OLDEVENTSFILE, It.IsAny<PizzaPlan[]>()), Times.Once);
+            _harness.Storage.Verify(s=>s.SaveArray(PizzaPlanner.ACTIVEEVENTSFILE, It.IsAny<PizzaPlan[]>()), Times.Once);
+            _harness.Storage.Verify(s=>s.SaveArray(PizzaPlanner.OLDEVENTSFILE, It.IsAny<PizzaPlan[]>()), Times.Once);
             _harness.Activity.Verify(s=>s.Log(It.IsAny<string>()), Times.Once);
 
             Assert.That(!_harness.ActivePizzaPlans.Any());
@@ -95,8 +94,8 @@ namespace PizzaLight.Tests.Unit
             await _harness.Planner.Start();
             _harness.Planner.LockInPizzaPlansOrCancelOnesThatPassDeadline().Wait();
 
-            _harness.Storage.Verify(s => s.SaveFile(PizzaPlanner.ACTIVEEVENTSFILE, It.IsAny<PizzaPlan[]>()), Times.Once);
-            _harness.Storage.Verify(s => s.SaveFile(PizzaPlanner.OLDEVENTSFILE, It.IsAny<PizzaPlan[]>()), Times.Never);
+            _harness.Storage.Verify(s => s.SaveArray(PizzaPlanner.ACTIVEEVENTSFILE, It.IsAny<PizzaPlan[]>()), Times.Once);
+            _harness.Storage.Verify(s => s.SaveArray(PizzaPlanner.OLDEVENTSFILE, It.IsAny<PizzaPlan[]>()), Times.Never);
             _harness.Core.Verify(s => s.SendMessage(It.IsAny<ResponseMessage>()), Times.Exactly(4));
             _harness.Activity.Verify(s => s.Log(It.IsAny<string>()), Times.Once);
 

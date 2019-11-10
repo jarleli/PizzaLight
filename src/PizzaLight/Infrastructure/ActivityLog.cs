@@ -55,4 +55,11 @@ namespace PizzaLight.Infrastructure
         public DateTimeOffset Timestamp { get; set; }
         public string Event { get; set; }
     }
+
+    public interface IActivityLog
+    {
+        void Log(string message);
+        List<ApplicationActivity> Activities { get; }
+    }
+
 }

@@ -59,11 +59,11 @@ namespace PizzaLight.Tests.Harness
             Config = new BotConfig(){InvitesPerEvent = 5, PizzaRoom = new PizzaRoom(){City = "city", Room="testroom"},BotRoom = "botroom"};
             Core = new Mock<IPizzaCore>();
             Storage = new Mock<IFileStorage>();
-            Storage.Setup(s => s.SaveFile< Invitation>(PizzaInviter.INVITESFILE, It.IsAny<Invitation[]>()))
+            Storage.Setup(s => s.SaveArray< Invitation>(PizzaInviter.INVITESFILE, It.IsAny<Invitation[]>()))
                 .Callback<string, Invitation[]>((s,invites)=> InvitationList = invites);
-            Storage.Setup(s => s.SaveFile<PizzaPlan>(PizzaPlanner.ACTIVEEVENTSFILE, It.IsAny<PizzaPlan[]>()))
+            Storage.Setup(s => s.SaveArray<PizzaPlan>(PizzaPlanner.ACTIVEEVENTSFILE, It.IsAny<PizzaPlan[]>()))
                 .Callback<string, PizzaPlan[]>((s, plans) => ActivePizzaPlans = plans);
-            Storage.Setup(s => s.SaveFile<PizzaPlan>(PizzaPlanner.OLDEVENTSFILE, It.IsAny<PizzaPlan[]>()))
+            Storage.Setup(s => s.SaveArray<PizzaPlan>(PizzaPlanner.OLDEVENTSFILE, It.IsAny<PizzaPlan[]>()))
                 .Callback<string, PizzaPlan[]>((s, plans) => OldPizzaPlans = plans);
 
             Logger = new Mock<ILogger>();
@@ -74,9 +74,20 @@ namespace PizzaLight.Tests.Harness
 
             OptOut = new OptOutHandler(Logger.Object, Config, OptOutState.Object, Core.Object, Activity.Object, FuncNow);
             Inviter = new PizzaInviter(Logger.Object, Config,Storage.Object, Core.Object, Activity.Object , FuncNow);
-            Planner = new PizzaPlanner(Logger.Object, Config, Storage.Object, Inviter, Core.Object, Activity.Object, FuncNow);
+            Planner = new PizzaPlanner(Logger.Object, Config, Storage.Object, Inviter, Core.Object, OptOutState.Object, Activity.Object, FuncNow);
+        }
+        public void Start()
+        {
+            Planner.Start().Wait();
+            Inviter.Start().Wait();
+            OptOut.Start().Wait();
         }
 
+        public void Tick()
+        {
+            Planner.PizzaPlannerLoopTick().Wait();
+            Inviter.PizzaInviterLoopTick().Wait();
+        }
 
         public TestHarness AddChannels()
         {
@@ -103,13 +114,13 @@ namespace PizzaLight.Tests.Harness
 
         public TestHarness HasEmptyListOfPlans()
         {
-            Storage.Setup(s => s.ReadFile<PizzaPlan>(PizzaPlanner.ACTIVEEVENTSFILE)).Returns(new PizzaPlan[0]);
+            Storage.Setup(s => s.ReadArray<PizzaPlan>(PizzaPlanner.ACTIVEEVENTSFILE)).Returns(new PizzaPlan[0]);
             return this;
         }
 
         private TestHarness HasEmptyListOfOldPlans()
         {
-            Storage.Setup(s => s.ReadFile<PizzaPlan>(PizzaPlanner.OLDEVENTSFILE)).Returns(new PizzaPlan[0]);
+            Storage.Setup(s => s.ReadArray<PizzaPlan>(PizzaPlanner.OLDEVENTSFILE)).Returns(new PizzaPlan[0]);
             OldPizzaPlans = new PizzaPlan[0];
             return this;
         }
@@ -118,8 +129,8 @@ namespace PizzaLight.Tests.Harness
             var channelList = new ConcurrentDictionary<string, ChannelState>();
             OptOutState.SetupGet(s => s.ChannelList).Returns(channelList);
 
-            OptOutState.Setup(s=>s.AddUserToOptOutOfChannel(It.IsAny<string>(), It.IsAny<string>()))
-               .Callback<string, string>((user, chan) =>
+            OptOutState.Setup(s=>s.AddUserToOptOutOfChannel(It.IsAny<Person>(), It.IsAny<string>()))
+               .Callback<Person, string> ((user, chan) =>
                {
                    if (!channelList.ContainsKey(chan))
                    {
@@ -128,14 +139,14 @@ namespace PizzaLight.Tests.Harness
                    channelList[chan].UsersThatHaveOptedOut.Add(user);
                }).Returns(Task.CompletedTask);
 
-            OptOutState.Setup(s => s.RemoveUserFromOptOutOfChannel(It.IsAny<string>(), It.IsAny<string>()))
-                .Callback<string, string>((user, chan) =>
+            OptOutState.Setup(s => s.RemoveUserFromOptOutOfChannel(It.IsAny<Person>(), It.IsAny<string>()))
+                .Callback<Person, string>((user, chan) =>
                 {
                     if (!channelList.ContainsKey(chan))
                     {
                         channelList.TryAdd(chan, new ChannelState());
                     }
-                    channelList[chan].UsersThatHaveOptedOut = new ConcurrentBag<string>( channelList[chan].UsersThatHaveOptedOut.Where(u=>u!=user));
+                    channelList[chan].UsersThatHaveOptedOut = new ConcurrentBag<Person>( channelList[chan].UsersThatHaveOptedOut.Where(u => u.UserId != user.UserId));
                 }).Returns(Task.CompletedTask);
 
 
@@ -144,13 +155,13 @@ namespace PizzaLight.Tests.Harness
 
         public TestHarness HasUpcomingPizzaPlans(PizzaPlan[] pizzaPlans)
         {
-            Storage.Setup(s => s.ReadFile<PizzaPlan>(PizzaPlanner.ACTIVEEVENTSFILE)).Returns(pizzaPlans);
+            Storage.Setup(s => s.ReadArray<PizzaPlan>(PizzaPlanner.ACTIVEEVENTSFILE)).Returns(pizzaPlans);
             return this;
         }
 
         private TestHarness HasNoOutstandingInvites()
         {
-            Storage.Setup(s => s.ReadFile<Invitation>(PizzaInviter.INVITESFILE)).Returns(new Invitation[0]);
+            Storage.Setup(s => s.ReadArray<Invitation>(PizzaInviter.INVITESFILE)).Returns(new Invitation[0]);
 
             return this;
         }
@@ -164,16 +175,6 @@ namespace PizzaLight.Tests.Harness
             return this;
         }
 
-        public void Start()
-        {
-            Planner.Start().Wait();
-            Inviter.Start().Wait();
-        }
-
-        public void Tick()
-        {
-            Planner.PizzaPlannerLoopTick().Wait();
-            Inviter.PizzaInviterLoopTick().Wait();
-        }
+       
     }
 }

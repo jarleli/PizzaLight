@@ -1,5 +1,6 @@
 ﻿using Noobot.Core.MessagingPipeline.Request;
 using PizzaLight.Infrastructure;
+using PizzaLight.Models;
 using PizzaLight.Resources.ExtensionClasses;
 using Serilog;
 using System;
@@ -19,6 +20,10 @@ namespace PizzaLight.Resources
         private IActivityLog _activityLog;
         private Func<DateTimeOffset> _funcNow;
         private Dictionary<string, OptOutOption> _pendingConfirmations = new Dictionary<string, OptOutOption>();
+        
+        const string OptOutString = "opt out";
+        const string OptString = "opt";
+        const string OptInString = "opt in";
 
         public OptOutHandler(ILogger logger, BotConfig config, IOptOutState state, IPizzaCore core, IActivityLog activityLog, Func<DateTimeOffset> funcNow)
         {
@@ -32,10 +37,7 @@ namespace PizzaLight.Resources
 
         public async Task<bool> HandleMessage(IncomingMessage incomingMessage)
         {
-            const string OptOutString = "opt out";
-            const string OptString = "opt";
-            const string OptInString = "opt in";
-            var text = incomingMessage.FullText.ToLowerInvariant();
+            var text = incomingMessage.FullText.ToLowerInvariant().TrimEnd();
             if (!text.StartsWith(OptString)) { return false; }
 
             if (text.StartsWith(OptOutString)){
@@ -54,7 +56,7 @@ namespace PizzaLight.Resources
             }
             else if (text.StartsWith(OptInString))
             {
-                if (OptInString.Equals(text.TrimEnd()))
+                if (OptInString.Equals(text))
                 {
                     //requires paramter channel
                 }
@@ -81,7 +83,7 @@ namespace PizzaLight.Resources
 
             if ("all".Equals(channel))
             {
-                throw new NotImplementedException();
+                await UserOptsOutOfChannel(incomingMessage, _config.PizzaRoom.Room);
             }
             else if (_config.PizzaRoom.Room == channel )
             {
@@ -100,21 +102,22 @@ namespace PizzaLight.Resources
                 var _pending = _pendingConfirmations[incoming.UserId];
                 _pendingConfirmations.Remove(incoming.UserId);
 
-                if (_funcNow() < _pending.OptionTime.AddSeconds(30))
+                if (_funcNow() < _pending.OptionTime.AddMinutes(2))
                 {
-                    await _state.AddUserToOptOutOfChannel(incoming.UserId, channel);
+                    _activityLog.Log($"User {incoming.Username} has opted out of pizza plans in channel {channel}.");
+                    await _state.AddUserToOptOutOfChannel(incoming.GetSendingUser(), channel);
                     await _core.SendMessage(incoming.ConfirmOptOutMessage(channel));
                 }
                 else
                 {
-                    _pendingConfirmations.Add(incoming.UserId, new OptOutOption(incoming.UserId, channel, _funcNow()));
+                    _pendingConfirmations.Add(incoming.UserId, new OptOutOption(incoming.GetSendingUser(), channel, _funcNow()));
                     var message = incoming.RepeatOptOutMessageToConfirm(channel);
                     await _core.SendMessage(message);
                 }
             }
             else
             {
-                _pendingConfirmations.Add(incoming.UserId, new OptOutOption(incoming.UserId, channel, _funcNow()));
+                _pendingConfirmations.Add(incoming.UserId, new OptOutOption(incoming.GetSendingUser(), channel, _funcNow()));
                 var message = incoming.RepeatOptOutMessageToConfirm(channel);
                 await _core.SendMessage(message);
             }
@@ -129,7 +132,7 @@ namespace PizzaLight.Resources
 
             if ("all".Equals(channel))
             {
-                throw new NotImplementedException();
+                await UserOptsIntoChannel(incoming, _config.PizzaRoom.Room);
             }
             else if (_config.PizzaRoom.Room == channel)
             {
@@ -150,7 +153,7 @@ namespace PizzaLight.Resources
 
             if (_state.ChannelList.ContainsKey(channel))
             {
-                await _state.RemoveUserFromOptOutOfChannel(incoming.UserId, channel);
+                await _state.RemoveUserFromOptOutOfChannel(incoming.GetSendingUser(), channel);
                 await _core.SendMessage(incoming.OptedIntoChannelAgain(channel));
             }
             else
@@ -161,23 +164,22 @@ namespace PizzaLight.Resources
 
         public Task Start()
         {
-            throw new NotImplementedException();
-        }
+            return _state.Start();        }
 
         public Task Stop()
         {
-            throw new NotImplementedException();
+            return _state.Stop();
         }
 
         internal class OptOutOption
         {
-            public OptOutOption(string userId, string channel, DateTimeOffset timestamp)
+            public OptOutOption(Person user, string channel, DateTimeOffset timestamp)
             {
-                UserId = userId;
+                User = user;
                 Channel = channel;
                 OptionTime = timestamp;
             }
-            public string UserId { get; set; }
+            public Person User { get; set; }
             public string Channel { get; set; }
             public DateTimeOffset OptionTime { get; set; }
         }

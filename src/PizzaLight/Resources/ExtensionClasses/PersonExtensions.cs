@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Noobot.Core.MessagingPipeline.Request;
 using PizzaLight.Models;
 using SlackConnector.Models;
 
@@ -55,6 +56,12 @@ namespace PizzaLight.Resources.ExtensionClasses
             }
             throw new Exception("");
         }
+
+        public static Person GetSendingUser(this IncomingMessage incomingMessage)
+        {
+            return new Person { UserId = incomingMessage.UserId, UserName = incomingMessage.Username };
+        }
+
 
     }
 }

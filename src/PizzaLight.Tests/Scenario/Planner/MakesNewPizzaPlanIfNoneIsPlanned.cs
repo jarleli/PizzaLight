@@ -28,14 +28,14 @@ namespace PizzaLight.Tests.Scenario.Planner
         [Test]
         public void ANewActivityIsPlannedForNextWeek()
         {
-            _harness.Storage.Verify(i=>i.SaveFile(PizzaPlanner.ACTIVEEVENTSFILE,It.Is<PizzaPlan[]>(l=>l.Count() == 1)));
+            _harness.Storage.Verify(i=>i.SaveArray(PizzaPlanner.ACTIVEEVENTSFILE,It.Is<PizzaPlan[]>(l=>l.Count() == 1)));
             Assert.AreEqual(1, _harness.ActivePizzaPlans.Length);
         }
 
         [Test]
         public void InvitationsWereSentToPotentialGuestsForNewPizzaPlan()
         {
-            _harness.Storage.Verify(i => i.SaveFile(PizzaInviter.INVITESFILE, It.Is<Invitation[]>(l => l.Count() == _harness.Config.InvitesPerEvent)));
+            _harness.Storage.Verify(i => i.SaveArray(PizzaInviter.INVITESFILE, It.Is<Invitation[]>(l => l.Count() == _harness.Config.InvitesPerEvent)));
             Assert.AreEqual(5, _harness.InvitationList.Length);
 
             _harness.Core.Verify(c => c.SendMessage(

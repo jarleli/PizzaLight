@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 using Noobot.Core.MessagingPipeline.Request;
 using Noobot.Core.MessagingPipeline.Response;
 using PizzaLight.Infrastructure;
-using PizzaLight.NoobotInternals;
 using PizzaLight.Resources.ExtensionClasses;
 using Serilog;
 using SlackConnector;
@@ -73,14 +72,17 @@ namespace PizzaLight.Resources
             Disconnect();
         }
 
-        public void AddMessageHandlerToPipeline(IMessageHandler handler)
+        public void AddMessageHandlerToPipeline(params IMessageHandler[] messageHandlers)
         {
-            if (handler == null) throw new ArgumentNullException(nameof(handler));
-            if (_messageHandlers.Any(h => h.GetType().CanBeCastTo(handler.GetType())))
+            if (messageHandlers == null) throw new ArgumentNullException(nameof(messageHandlers));
+            foreach (var handler in messageHandlers)
             {
-                throw new InvalidOperationException($"Handler of type {handler.GetType().Name} already exists in message handlers.");
+                if (_messageHandlers.Any(h => h.GetType().CanBeCastTo(handler.GetType())))
+                {
+                    throw new InvalidOperationException($"Handler of type {handler.GetType().Name} already exists in message handlers.");
+                }
+                _messageHandlers.Add(handler);
             }
-            _messageHandlers.Add(handler);
         }
 
         private Task OnReconnect()
@@ -283,4 +285,16 @@ namespace PizzaLight.Resources
 
 
     }
+
+    public interface IPizzaCore
+    {
+        ISlackConnection SlackConnection { get; }
+        IReadOnlyDictionary<string, SlackUser> UserCache { get; }
+        Task MessageReceived(SlackMessage message);
+        Task SendMessage(ResponseMessage responseMessage);
+        Task Start();
+        void Stop();
+        void AddMessageHandlerToPipeline(params IMessageHandler[] messageHandlers);
+    }
+
 }

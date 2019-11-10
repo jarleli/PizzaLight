@@ -12,13 +12,14 @@ namespace PizzaLight.Resources.ExtensionClasses
     {
         public static ResponseMessage ProvideChannelOptionToOptOut(this IncomingMessage incomingMessage, BotConfig config)
         {
-            var channels = new[] { config.PizzaRoom.Room }.Select(s=>$"`{s}`");
-            var channelList = string.Join(", ", channels, 0, channels.Count() - 1) + "or `all`";
+            var channels = new[] { config.PizzaRoom.Room }.Select(s=>$"`{s}`").ToArray();
+            var channelList = string.Join(", ", channels) + " or `all`";
             var message = new ResponseMessage()
             {
                 Text =
         $"To opt out of receiving invitations from me, plese specify which channel you want to me ignore you in. \n" +
-        $"Use `opt out` `[Channel]`, where options for Channel include: {channelList}",
+        $"Use `opt out [Channel]`, " +
+        $"where options for Channel include: {channelList}",
 
                 ResponseType = ResponseType.DirectMessage,
                 UserId = incomingMessage.UserId,
@@ -41,7 +42,7 @@ namespace PizzaLight.Resources.ExtensionClasses
         {
             var message = new ResponseMessage()
             {
-                Text = $"You have now opted out of all and any upcoming pizza plans in the channel '{channel}'.\n" +
+                Text = $"You have now opted out of any and all upcoming pizza plans in the channel '{channel}'.\n" +
                 $"If you should change your mind you can allways opt in again by typing `opt inn {channel}`.",
                 ResponseType = ResponseType.DirectMessage,
                 UserId = incomingMessage.UserId,
@@ -53,7 +54,7 @@ namespace PizzaLight.Resources.ExtensionClasses
         {
             var message = new ResponseMessage()
             {
-                Text = $"You have now opted in for any upcoming pizza plans in the channel '{channel}'.\n" +
+                Text = $"You have now opted in for any upcoming pizza plans in the channel `{channel}`.\n" +
                 $"I am really happy you have chosen to do so. Perhaps you will be selected soon to eat some delicious pizza.",
                 ResponseType = ResponseType.DirectMessage,
                 UserId = incomingMessage.UserId,

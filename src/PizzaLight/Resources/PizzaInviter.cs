@@ -32,7 +32,7 @@ namespace PizzaLight.Resources
         private const int HOURSTOWAITBEFORECANCELLINGINVITATION = 4;
         // ReSharper restore InconsistentNaming
 
-        public List<Invitation> OutstandingInvites => _activeInvitations;
+        public List<Invitation> OutstandingInvites { get => _activeInvitations; }
 
         public PizzaInviter(ILogger logger, BotConfig botConfig, IFileStorage storage, IPizzaCore core, IActivityLog activityLog, Func<DateTimeOffset> funcNow)
         {
@@ -50,7 +50,7 @@ namespace PizzaLight.Resources
             _logger.Debug("Starting Pizza Inviter.");
 
             await _storage.Start();
-            _activeInvitations = _storage.ReadFile<Invitation>(INVITESFILE).ToList();
+            _activeInvitations = _storage.ReadArray<Invitation>(INVITESFILE).ToList();
             _timer = new Timer(async _ => await PizzaInviterLoopTick(), null, TimeSpan.FromSeconds(10), TimeSpan.FromMinutes(10));
         }
 
@@ -78,7 +78,7 @@ namespace PizzaLight.Resources
         public void Invite(IEnumerable<Invitation> newInvites)
         {
             _activeInvitations.AddRange(newInvites);
-            _storage.SaveFile(INVITESFILE, _activeInvitations.ToArray());
+            _storage.SaveArray(INVITESFILE, _activeInvitations.ToArray());
         }
 
         private async Task SendInvites()
@@ -94,7 +94,7 @@ namespace PizzaLight.Resources
                 var message = invitation.CreateNewInvitationMessage(_botConfig.BotRoom);
                 await _core.SendMessage(message);
                 invitation.Invited = _funcNow();
-                _storage.SaveFile(INVITESFILE, _activeInvitations.ToArray());
+                _storage.SaveArray(INVITESFILE, _activeInvitations.ToArray());
                 _activityLog.Log($"Sent INVITE to event '{invitation.EventId}' to user {invitation.UserName}");
             }
         }
@@ -115,7 +115,7 @@ namespace PizzaLight.Resources
                 var message = reminder.CreateReminderMessage();
                 await _core.SendMessage(message);
                 reminder.Reminded = _funcNow();
-                _storage.SaveFile(INVITESFILE, _activeInvitations.ToArray());
+                _storage.SaveArray(INVITESFILE, _activeInvitations.ToArray());
                 _activityLog.Log($"Sent REMINDER to event '{reminder.EventId}' to user {reminder.UserName}");
             }
         }
@@ -140,7 +140,7 @@ namespace PizzaLight.Resources
                 _activeInvitations.Remove(invitation);
                 await RaiseOnInvitationChanged(invitation);
 
-                _storage.SaveFile(INVITESFILE, _activeInvitations.ToArray());
+                _storage.SaveArray(INVITESFILE, _activeInvitations.ToArray());
                 _activityLog.Log($"Sent EXPIRATION to event '{invitation.EventId}' to user {invitation.UserName}");
             }
         }
@@ -181,7 +181,7 @@ namespace PizzaLight.Resources
             await RaiseOnInvitationChanged(invitation);
 
             _activeInvitations.Remove(invitation);
-            _storage.SaveFile(INVITESFILE, _activeInvitations.ToArray());
+            _storage.SaveArray(INVITESFILE, _activeInvitations.ToArray());
         }
 
         private async Task RejectInvitation(IncomingMessage incomingMessage)
@@ -193,7 +193,7 @@ namespace PizzaLight.Resources
             await RaiseOnInvitationChanged(invitation);
 
             _activeInvitations.Remove(invitation);
-            _storage.SaveFile(INVITESFILE, _activeInvitations.ToArray());
+            _storage.SaveArray(INVITESFILE, _activeInvitations.ToArray());
 
             var reply = incomingMessage.ReplyDirectlyToUser("That is too bad, I will try to find someone else.");
             await _core.SendMessage(reply);
@@ -211,4 +211,12 @@ namespace PizzaLight.Resources
             }
         }
     }
+
+    public interface IPizzaInviter : IMessageHandler, IMustBeInitialized
+    {
+        event PizzaInviter.InvitationChangedEventHandler OnInvitationChanged;
+        void Invite(IEnumerable<Invitation> newInvites);
+        List<Invitation> OutstandingInvites { get; }
+    }
+
 }

@@ -32,10 +32,13 @@ namespace PizzaLight
                 .AddJsonOptions(options=> options.SerializerSettings.Formatting = Formatting.Indented);
             services.AddSingleton(Configuration.GetSection("Bot").Get<BotConfig>());
             services.AddSingleton<IFileStorage, JsonStorage>();
+            services.AddSingleton<OptOutState, OptOutState>();
+            services.AddSingleton<IOptOutHandler, OptOutHandler>();
+            services.AddSingleton<IOptOutState, OptOutState>();
             services.AddSingleton<IActivityLog, ActivityLog>();
-            services.AddSingleton<PizzaPlanner>();
             services.AddSingleton<IPizzaInviter, PizzaInviter>();
             services.AddSingleton<IPizzaCore, PizzaCore>();
+            services.AddSingleton<PizzaPlanner>();
             services.AddSingleton<PizzaServiceHost>();
             services.AddSingleton<Func<DateTimeOffset>>(()=> DateTimeOffset.UtcNow);
 

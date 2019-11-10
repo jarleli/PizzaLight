@@ -31,7 +31,7 @@ namespace PizzaLight.Infrastructure
             return Task.CompletedTask;
         }
 
-        public T[] ReadFile<T>(string fileName) where T : class, new()
+        public T[] ReadArray<T>(string fileName) where T : class, new()
         {
             string filePath = GetFilePath(fileName);
             if (!File.Exists(filePath))
@@ -53,12 +53,13 @@ namespace PizzaLight.Infrastructure
             catch (Exception ex)
             {
                 _log.Error($"Error loading file '{filePath}' - {ex}");
+                throw;
             }
 
             return result;
         }
 
-        public void SaveFile<T>(string fileName, T[] objects) where T : class, new()
+        public void SaveArray<T>(string fileName, T[] objects) where T : class, new()
         {
             string filePath = GetFilePath(fileName);
             File.WriteAllText(filePath, JsonConvert.SerializeObject(objects, Formatting.Indented));
@@ -73,9 +74,58 @@ namespace PizzaLight.Infrastructure
             }
         }
 
+
+        public T ReadObject<T>(string fileName) where T : class, new()
+        {
+            string filePath = GetFilePath(fileName);
+            if (!File.Exists(filePath))
+            {
+                File.Create(filePath).Dispose();
+            }
+
+            try
+            {
+                string file = File.ReadAllText(filePath);
+
+                if (!string.IsNullOrEmpty(file))
+                {
+                    return JsonConvert.DeserializeObject<T>(file);
+                }
+                else
+                {
+                    return (T)null;
+                }
+            }
+            catch (Exception ex)
+            {
+                _log.Error($"Error loading file '{filePath}' - {ex}");
+                throw;           
+            }
+        }
+
+        public void SaveObject<T>(string fileName, T obj) where T : class, new()
+        {
+            string filePath = GetFilePath(fileName);
+            File.WriteAllText(filePath, JsonConvert.SerializeObject(obj, Formatting.Indented));
+        }
+
         private string GetFilePath(string fileName)
         {
+            if (_directory is null)
+            { throw new NotStartedException("Storage not properly started with Start()"); }
             return Path.Combine(_directory, fileName + ".json");
         }
+
     }
+
+    public interface IFileStorage : IMustBeInitialized
+    {
+        void DeleteFile(string fileName);
+        T[] ReadArray<T>(string fileName) where T : class, new();
+        void SaveArray<T>(string fileName, T[] objects) where T : class, new();
+        T ReadObject<T>(string fileName) where T : class, new();
+        void SaveObject<T>(string fileName, T objects) where T : class, new();
+
+    }
+
 }
