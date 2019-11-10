@@ -153,6 +153,7 @@ namespace PizzaLight.Resources
 
             if (_state.ChannelList.ContainsKey(channel))
             {
+                _activityLog.Log($"User {incoming.Username} has opted in for pizza plans again in channel {channel}.");
                 await _state.RemoveUserFromOptOutOfChannel(incoming.GetSendingUser(), channel);
                 await _core.SendMessage(incoming.OptedIntoChannelAgain(channel));
             }

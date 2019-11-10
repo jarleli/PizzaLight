@@ -195,7 +195,7 @@ namespace PizzaLight.Resources
             _activeInvitations.Remove(invitation);
             _storage.SaveArray(INVITESFILE, _activeInvitations.ToArray());
 
-            var reply = incomingMessage.ReplyDirectlyToUser("That is too bad, I will try to find someone else.");
+            var reply = incomingMessage.UserTurnsDownInvitation();
             await _core.SendMessage(reply);
         }
 
