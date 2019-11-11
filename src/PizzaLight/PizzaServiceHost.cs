@@ -14,22 +14,20 @@ namespace PizzaLight
     {
         private readonly IActivityLog _activityLog;
         private readonly CancellationTokenSource _cts;
-        private readonly IPizzaInviter _inviter;
-        private readonly PizzaPlanner _planner;
-        private readonly IOptOutHandler _optOutHandler;
         private readonly ILogger _logger;
         private readonly IPizzaCore _pizzaCore;
         private List<IMustBeInitialized> _resources;
+        private List<IMessageHandler> _handlers;
 
-        public PizzaServiceHost(ILogger logger, CancellationTokenSource cts, IPizzaCore pizzaCore, IPizzaInviter inviter, PizzaPlanner planner, IOptOutHandler optOutHandler, IActivityLog activityLog)
+        public PizzaServiceHost(ILogger logger, CancellationTokenSource cts, IPizzaCore pizzaCore, IPizzaInviter inviter, PizzaPlanner planner, IOptOutHandler optOutHandler, IAnnouncementHandler annoucementHandler, IActivityLog activityLog)
         {
             _activityLog = activityLog ?? throw new ArgumentNullException(nameof(activityLog));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _cts = cts ?? throw new ArgumentNullException(nameof(cts));
             _pizzaCore = pizzaCore ?? throw new ArgumentNullException(nameof(pizzaCore));
-            _inviter = inviter ?? throw new ArgumentNullException(nameof(inviter));
-            _planner = planner ?? throw new ArgumentNullException(nameof(planner));
-            _optOutHandler = optOutHandler ?? throw new ArgumentNullException(nameof(optOutHandler));
+
+            _resources = new List<IMustBeInitialized>() { inviter, planner, optOutHandler, annoucementHandler };
+            _handlers = new List<IMessageHandler>() { inviter, optOutHandler };
         }
 
         public async Task Start()
@@ -41,10 +39,10 @@ namespace PizzaLight
                 {
                     throw new OperationCanceledException("Could not connect to slack.");
                 }
-                _pizzaCore.AddMessageHandlerToPipeline(_inviter, _optOutHandler);
-                _resources = new List<IMustBeInitialized>() {_inviter, _planner, _optOutHandler };
                 var startTasks = _resources.Select(r => r.Start());
                 Task.WaitAll(startTasks.ToArray());
+
+                _pizzaCore.AddMessageHandlerToPipeline(_handlers.ToArray());
                 _activityLog.Log($"{this.GetType().Name} is up and running.");
 
             }

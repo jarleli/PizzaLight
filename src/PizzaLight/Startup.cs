@@ -36,6 +36,7 @@ namespace PizzaLight
             services.AddSingleton<IOptOutHandler, OptOutHandler>();
             services.AddSingleton<IOptOutState, OptOutState>();
             services.AddSingleton<IActivityLog, ActivityLog>();
+            services.AddSingleton<IAnnouncementHandler, AnnouncementHandler>();
             services.AddSingleton<IPizzaInviter, PizzaInviter>();
             services.AddSingleton<IPizzaCore, PizzaCore>();
             services.AddSingleton<PizzaPlanner>();
