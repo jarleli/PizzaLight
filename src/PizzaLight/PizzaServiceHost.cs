@@ -59,9 +59,10 @@ namespace PizzaLight
         {
             _logger.Debug("Stopping all resources.");
             _cts.Cancel();
-            _pizzaCore.Stop();
-            var startTasks = _resources.Select(r => r.Stop());
-            Task.WaitAll(startTasks.ToArray());
+            var tasks = _resources.Select(r => r.Stop()).ToList();
+            tasks.Add(_pizzaCore.Stop());
+
+            Task.WaitAll(tasks.ToArray());
             _activityLog.Log($"{this.GetType().Name} has stopped all resources. Exiting.");
 
             _logger.Information("All resources stopped. Exiting.");

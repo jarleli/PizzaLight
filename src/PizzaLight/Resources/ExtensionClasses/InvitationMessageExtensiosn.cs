@@ -61,7 +61,7 @@ namespace PizzaLight.Resources.ExtensionClasses
         public static ResponseMessage UserTurnsDownInvitation(this IncomingMessage incoming)
         {
             return incoming.ReplyDirectlyToUser("That is too bad, I will try to find someone else. \n" +
-                "If yo udon't want to receive any more invitations from me try typing `opt out`");
+                "If you don't want to receive any more invitations from me try typing `opt out`");
         }
     }
 }

@@ -66,10 +66,10 @@ namespace PizzaLight.Resources
             _logger.Verbose($"Bots Name: {SlackConnection.Self.Name}");
         }
 
-        public void Stop()
+        public async Task Stop()
         {
             Console.WriteLine("Disconnecting from slack...");
-            Disconnect();
+            await Disconnect();
         }
 
         public void AddMessageHandlerToPipeline(params IMessageHandler[] messageHandlers)
@@ -99,16 +99,13 @@ namespace PizzaLight.Resources
             return Task.CompletedTask;
         }
 
-        private void Disconnect()
+        private async Task Disconnect()
         {
             _isDisconnecting = true;
 
             if (SlackConnection != null && SlackConnection.IsConnected)
             {
-                SlackConnection
-                    .Close()
-                    .GetAwaiter()
-                    .GetResult();
+                await SlackConnection.Close();
             }
         }
 
@@ -293,7 +290,7 @@ namespace PizzaLight.Resources
         Task MessageReceived(SlackMessage message);
         Task SendMessage(ResponseMessage responseMessage);
         Task Start();
-        void Stop();
+        Task Stop();
         void AddMessageHandlerToPipeline(params IMessageHandler[] messageHandlers);
     }
 

@@ -7,6 +7,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="NoobotInternals\**" />
+    <EmbeddedResource Remove="NoobotInternals\**" />
+    <None Remove="NoobotInternals\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Bip39Words" Version="1.0.0" />
     <PackageReference Include="microsoft.aspnetcore.hosting" Version="2.2.0" />
     <PackageReference Include="microsoft.aspnetcore.mvc" Version="2.2.0" />
@@ -25,10 +31,6 @@
     <None Update="appsettings.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="NoobotInternals\" />
   </ItemGroup>
 
 </Project>
