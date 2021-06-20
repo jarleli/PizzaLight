@@ -18,7 +18,7 @@ namespace PizzaLight.Resources.ExtensionClasses
                 var text = $"*Great news!* \n" +
                            $"This amazing group of people has accepted the invitation for pizza on *{day} at {time}* \n" +
                            $"{participantlist} \n" +
-                           $"If you don't know them all yet, now is an excellent opportunity. Please have a fantastic time!";
+                           $"If you don't know them all yet, now is an excellent opportunity. Please be mindful of local recommendations, stay safe and have a fantastic time!";
 
                 var message = new ResponseMessage()
                 {
@@ -40,7 +40,9 @@ namespace PizzaLight.Resources.ExtensionClasses
                        $"{pizzaPlan.PersonDesignatedToMakeReservation.GetFormattedUserId()} will make a reservation for the group.\n" +
                        $"{pizzaPlan.PersonDesignatedToHandleExpenses.GetFormattedUserId()} will expense the meal afterwards.\n" +
                        $"All the rest of you have to do is show up and have a great time and get to know each other better.\n" +
-                       $"Maybe once you are done you can upload an image of you all enjoying yourselves?";
+                       $"Maybe once you are done you can upload an image of you all enjoying yourselves?" +
+                       $"" +
+                       $"I want to remind you all to be mindful of local recommendations during these times and please stay at home if you are showing any symptoms.";
 
             var message = ResponseMessage.ChannelMessage(botRoom, text, (Attachment) null, null);
             
@@ -56,7 +58,7 @@ namespace PizzaLight.Resources.ExtensionClasses
             var text = $"Hello again, @{pizzaPlan.PersonDesignatedToMakeReservation.UserName} \n" +
                        $"I need someone to help me make a reservation at a suitable location for the upcoming pizza dinner planned on *{day} at {time}*.\n" +
                        $"I have chosen you for this honor and wish you the best of luck to find a suitable location and make the necessary arrangements. If you need help finding a venue or have any questions please head over to #{botRoom}. \n" +
-                       $"Someone else has been chosen to pay for the event and handling the expensing part, all you have to do is to make a reservation. \n" +
+                       $"Someone else has been chosen to pay for the event and expense it, all you have to do is to make a reservation. \n" +
                        $"Also remember to inform or invite the other participants once you have made the reservation. The other participants are {participantlist} \n" +
                        $"Thank you!";
             return new ResponseMessage()

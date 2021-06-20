@@ -29,6 +29,9 @@ namespace PizzaLight.Resources
 
             if (state.OptOutFeatureAnnounced == null)
             {
+                _activity.Log("Tried to announce opt out feature, but announcement is disabled");
+                return;
+
                 var channels = new[] { _config.BotRoom, _config.PizzaRoom.Room };
                 foreach (var channel in channels)
                 {
