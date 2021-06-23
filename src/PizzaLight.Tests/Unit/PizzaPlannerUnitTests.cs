@@ -2,11 +2,10 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Flurl.Util;
 using Moq;
-using Noobot.Core.MessagingPipeline.Response;
 using NUnit.Framework;
 using PizzaLight.Models;
+using PizzaLight.Models.SlackModels;
 using PizzaLight.Resources;
 using PizzaLight.Tests.Harness;
 
@@ -30,8 +29,8 @@ namespace PizzaLight.Tests.Unit
             var cache = _harness.UserCache;
             var result = _harness.Planner.FindPeopleToInvite(_harness.Config.PizzaRoom.Room, 2, new List<Person>());
             Assert.That(result.Count == 2,"result.Count == 2");
-            Assert.That(cache.Values.Any(u=>u.Name == result[0].UserName));
-            Assert.That(cache.Values.Any(u=>u.Name == result[1].UserName));
+            Assert.That(cache.Any(u=>u.name == result[0].UserName));
+            Assert.That(cache.Any(u=>u.name == result[1].UserName));
             Assert.That( result[0].UserName != result[1].UserName);
         }
 
@@ -96,7 +95,7 @@ namespace PizzaLight.Tests.Unit
 
             _harness.Storage.Verify(s => s.SaveArray(PizzaPlanner.ACTIVEEVENTSFILE, It.IsAny<PizzaPlan[]>()), Times.Once);
             _harness.Storage.Verify(s => s.SaveArray(PizzaPlanner.OLDEVENTSFILE, It.IsAny<PizzaPlan[]>()), Times.Never);
-            _harness.Core.Verify(s => s.SendMessage(It.IsAny<ResponseMessage>()), Times.Exactly(4));
+            _harness.Core.Verify(s => s.SendMessage(It.IsAny<MessageToSend>()), Times.Exactly(4));
             _harness.Activity.Verify(s => s.Log(It.IsAny<string>()), Times.Once);
 
             Assert.That(_harness.ActivePizzaPlans.Length == 1);

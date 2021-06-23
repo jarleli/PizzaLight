@@ -2,11 +2,11 @@
 using System.Linq;
 using System.Threading.Tasks;
 using Moq;
-using Noobot.Core.MessagingPipeline.Request;
-using Noobot.Core.MessagingPipeline.Response;
 using NUnit.Framework;
 using PizzaLight.Models;
+using PizzaLight.Models.SlackModels;
 using PizzaLight.Tests.Harness;
+using SlackAPI.WebSocketMessages;
 
 namespace PizzaLight.Tests.Scenario.Inviter
 {
@@ -30,7 +30,7 @@ namespace PizzaLight.Tests.Scenario.Inviter
             _userIdOfGustRejecting = _plan.Invited.First().UserId;
             _firstInvitedUsers = _plan.Invited.Select(u => u.UserId).ToList();
             await _harness.Inviter.HandleMessage(
-                new IncomingMessage() {UserId = _userIdOfGustRejecting, FullText = "no"});
+                new NewMessage() {user = _userIdOfGustRejecting, text= "no"});
 
             _harness.Core.Invocations.Clear();
             _harness.Tick();
@@ -53,7 +53,7 @@ namespace PizzaLight.Tests.Scenario.Inviter
             var _newGuest = _plan.Invited.Single(i => !_firstInvitedUsers.Any(f=>f==i.UserId));
 
             _harness.Core.Verify(c => c.SendMessage(
-                It.Is<ResponseMessage>(m 
+                It.Is<MessageToSend>(m 
                 => m.Text.Contains(
                     "Do you want to meet up for a social gathering and eat some")
                     && m.UserId == _newGuest.UserId)));

@@ -1,8 +1,8 @@
-﻿using Noobot.Core.MessagingPipeline.Request;
-using PizzaLight.Infrastructure;
+﻿using PizzaLight.Infrastructure;
 using PizzaLight.Models;
 using PizzaLight.Resources.ExtensionClasses;
 using Serilog;
+using SlackAPI.WebSocketMessages;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -35,9 +35,9 @@ namespace PizzaLight.Resources
             _funcNow = funcNow ?? throw new ArgumentNullException(nameof(funcNow));
         }
 
-        public async Task<bool> HandleMessage(IncomingMessage incomingMessage)
+        public async Task<bool> HandleMessage(NewMessage incomingMessage)
         {
-            var text = incomingMessage.FullText.ToLowerInvariant().TrimEnd();
+            var text = incomingMessage.text.ToLowerInvariant().TrimEnd();
             if (!text.StartsWith(OptString)) { return false; }
 
             if (text.StartsWith(OptOutString)){
@@ -74,7 +74,7 @@ namespace PizzaLight.Resources
             }
         }
 
-        private async Task TryOptOutChannel(IncomingMessage incomingMessage, string channel)
+        private async Task TryOptOutChannel(NewMessage incomingMessage, string channel)
         {
             if(channel[0] == '#')
             {
@@ -95,35 +95,35 @@ namespace PizzaLight.Resources
             }
         }
 
-        private async Task UserOptsOutOfChannel(IncomingMessage incoming, string channel)
+        private async Task UserOptsOutOfChannel(NewMessage incoming, string channel)
         {
-            if (_pendingConfirmations.ContainsKey(incoming.UserId))
+            if (_pendingConfirmations.ContainsKey(incoming.user))
             {
-                var _pending = _pendingConfirmations[incoming.UserId];
-                _pendingConfirmations.Remove(incoming.UserId);
+                var _pending = _pendingConfirmations[incoming.user];
+                _pendingConfirmations.Remove(incoming.user);
 
                 if (_funcNow() < _pending.OptionTime.AddMinutes(2))
                 {
-                    _activityLog.Log($"User {incoming.Username} has opted out of pizza plans in channel {channel}.");
+                    _activityLog.Log($"User {incoming.username} has opted out of pizza plans in channel {channel}.");
                     await _state.AddUserToOptOutOfChannel(incoming.GetSendingUser(), channel);
                     await _core.SendMessage(incoming.ConfirmOptOutMessage(channel));
                 }
                 else
                 {
-                    _pendingConfirmations.Add(incoming.UserId, new OptOutOption(incoming.GetSendingUser(), channel, _funcNow()));
+                    _pendingConfirmations.Add(incoming.user, new OptOutOption(incoming.GetSendingUser(), channel, _funcNow()));
                     var message = incoming.RepeatOptOutMessageToConfirm(channel);
                     await _core.SendMessage(message);
                 }
             }
             else
             {
-                _pendingConfirmations.Add(incoming.UserId, new OptOutOption(incoming.GetSendingUser(), channel, _funcNow()));
+                _pendingConfirmations.Add(incoming.user, new OptOutOption(incoming.GetSendingUser(), channel, _funcNow()));
                 var message = incoming.RepeatOptOutMessageToConfirm(channel);
                 await _core.SendMessage(message);
             }
         }
 
-        private async Task TryOptInChannel(IncomingMessage incoming, string channel)
+        private async Task TryOptInChannel(NewMessage incoming, string channel)
         {
             if (channel[0] == '#')
             {
@@ -144,7 +144,7 @@ namespace PizzaLight.Resources
             }
         }
 
-        private async Task UserOptsIntoChannel(IncomingMessage incoming, string channel)
+        private async Task UserOptsIntoChannel(NewMessage incoming, string channel)
         {
             if (channel[0] == '#')
             {
@@ -153,7 +153,7 @@ namespace PizzaLight.Resources
 
             if (_state.ChannelList.ContainsKey(channel))
             {
-                _activityLog.Log($"User {incoming.Username} has opted in for pizza plans again in channel {channel}.");
+                _activityLog.Log($"User {incoming.user} has opted in for pizza plans again in channel {channel}.");
                 await _state.RemoveUserFromOptOutOfChannel(incoming.GetSendingUser(), channel);
                 await _core.SendMessage(incoming.OptedIntoChannelAgain(channel));
             }

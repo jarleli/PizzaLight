@@ -1,11 +1,11 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.28010.2041
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.30611.23
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PizzaLight", "PizzaLight\PizzaLight.csproj", "{8A372D7D-0470-48A6-9262-622BFB1D9B7F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PizzaLight.Tests", "PizzaLight.Tests\PizzaLight.Tests.csproj", "{B1FCD006-79A6-4276-AF16-FB35A99B20B3}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PizzaLight.Tests", "PizzaLight.Tests\PizzaLight.Tests.csproj", "{B1FCD006-79A6-4276-AF16-FB35A99B20B3}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

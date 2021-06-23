@@ -25,7 +25,7 @@ namespace PizzaLight.Controllers
             {
                 application = "pizzalight",
                 version = Assembly.GetCallingAssembly().GetName().Version.ToString(),
-                activeConnection = _core.SlackConnection?.IsConnected ?? false,
+                activeConnection = _core.IsConnected,
                 ActivePlans = _planner.PizzaPlans
             });
         }

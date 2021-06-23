@@ -1,16 +1,16 @@
-using Noobot.Core.MessagingPipeline.Request;
-using Noobot.Core.MessagingPipeline.Response;
 using PizzaLight.Models;
+using PizzaLight.Models.SlackModels;
+using SlackAPI.WebSocketMessages;
 
 namespace PizzaLight.Resources.ExtensionClasses
 {
     public static class InvitationMessageExtensiosn
     {
-        public static ResponseMessage CreateNewInvitationMessage(this Invitation invitation, string botRoom)
+        public static MessageToSend CreateNewInvitationMessage(this Invitation invitation, string botRoom)
         {
             var day = invitation.EventTime.LocalDateTime.ToString("dddd, MMMM dd");
             var time = invitation.EventTime.LocalDateTime.ToString("HH:mm");
-            var message = new ResponseMessage()
+            var message = new MessageToSend()
             {
                 Text =
                     $"Hello @{invitation.UserName} \n" +
@@ -20,16 +20,15 @@ namespace PizzaLight.Resources.ExtensionClasses
 
                     "Please reply `yes` or `no`. Or if you rather I don't bother you again try typing `opt out`",
 
-                ResponseType = ResponseType.DirectMessage,
                 UserId = invitation.UserId,
             };
             return message;
         }
-        public static ResponseMessage CreateReminderMessage(this Invitation reminder)
+        public static MessageToSend CreateReminderMessage(this Invitation reminder)
         {
             var day = reminder.EventTime.LocalDateTime.ToString("dddd, MMMM dd");
             var time = reminder.EventTime.LocalDateTime.ToString("HH:mm");
-            var message = new ResponseMessage()
+            var message = new MessageToSend()
             {
                 Text =
                     $"Hello @{reminder.UserName} \n" +
@@ -37,30 +36,27 @@ namespace PizzaLight.Resources.ExtensionClasses
                     "Since you haven't responded yet I'm sending you this friendly reminder. If you don't respond promptly I will assume that you cannot make it and will invite someone else instead. \n" +
                     "Please reply `yes` or `no` to indicate whether you can make it..",
 
-                ResponseType = ResponseType.DirectMessage,
                 UserId = reminder.UserId,
             };
             return message;
         }
 
-        public static ResponseMessage CreateExpiredInvitationMessage(this Invitation invitation)
+        public static MessageToSend CreateExpiredInvitationMessage(this Invitation invitation)
         {
-            var message = new ResponseMessage()
+            var message = new MessageToSend()
             {
                 Text =
                     $"Hello @{invitation.UserName} \n" +
                     $"Sadly, you didn't respond to my invitation and I will now invite someone else instead. \n" +
                     $"Don't worry, I will try again sometime later. Maybe we will have better luck then.",
-
-                ResponseType = ResponseType.DirectMessage,
                 UserId = invitation.UserId,
             };
             return message;
         }
 
-        public static ResponseMessage UserTurnsDownInvitation(this IncomingMessage incoming)
+        public static MessageToSend UserTurnsDownInvitation(this NewMessage incoming)
         {
-            return incoming.ReplyDirectlyToUser("That is too bad, I will try to find someone else. \n" +
+            return incoming.CreateResponseMessage("That is too bad, I will try to find someone else. \n" +
                 "If you don't want to receive any more invitations from me try typing `opt out`");
         }
     }

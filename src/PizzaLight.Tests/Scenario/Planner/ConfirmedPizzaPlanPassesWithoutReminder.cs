@@ -2,8 +2,6 @@
 using System.Linq;
 using System.Threading.Tasks;
 using Moq;
-using Noobot.Core.MessagingPipeline.Request;
-using Noobot.Core.MessagingPipeline.Response;
 using NUnit.Framework;
 using PizzaLight.Models;
 using PizzaLight.Resources;
@@ -27,7 +25,7 @@ namespace PizzaLight.Tests.Scenario.Planner
             _plan = _harness.ActivePizzaPlans.Single();
             foreach (var person in _plan.Invited.ToList())
             {
-                await _harness.Inviter.HandleMessage(new IncomingMessage() { UserId = person.UserId, FullText = "yes" });
+                await _harness.Inviter.HandleMessage(new SlackAPI.WebSocketMessages.NewMessage() { user = person.UserId, text= "yes" });
             }
             _harness.Tick();
             _harness.Core.Invocations.Clear();

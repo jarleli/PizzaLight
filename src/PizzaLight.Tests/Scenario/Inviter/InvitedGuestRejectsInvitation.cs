@@ -1,11 +1,11 @@
 ﻿using System.Linq;
 using System.Threading.Tasks;
 using Moq;
-using Noobot.Core.MessagingPipeline.Request;
-using Noobot.Core.MessagingPipeline.Response;
 using NUnit.Framework;
 using PizzaLight.Models;
+using PizzaLight.Models.SlackModels;
 using PizzaLight.Tests.Harness;
+using SlackAPI.WebSocketMessages;
 
 namespace PizzaLight.Tests.Scenario.Inviter
 {
@@ -26,7 +26,7 @@ namespace PizzaLight.Tests.Scenario.Inviter
             _plan = _harness.ActivePizzaPlans.Single();
             _userId = _plan.Invited.First().UserId;
             await _harness.Inviter.HandleMessage(
-                new IncomingMessage() {UserId = _plan.Invited.First().UserId, FullText = "no"});
+                new NewMessage() {user = _plan.Invited.First().UserId, text= "no"});
         }
 
         [Test]
@@ -41,7 +41,7 @@ namespace PizzaLight.Tests.Scenario.Inviter
         public void ReplyToUserWeGotHisAnswer()
         {
             _harness.Core.Verify(c => c.SendMessage(
-                It.Is<ResponseMessage>(m => m.Text.Contains(
+                It.Is<MessageToSend>(m => m.Text.Contains(
                     "That is too bad, I will try to find someone else."))));
         }
     }

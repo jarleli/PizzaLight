@@ -35,7 +35,7 @@ namespace PizzaLight
             try
             {
                 await _pizzaCore.Start();
-                if (!_pizzaCore.SlackConnection?.IsConnected ?? true)
+                if (!_pizzaCore.IsConnected )
                 {
                     throw new OperationCanceledException("Could not connect to slack.");
                 }

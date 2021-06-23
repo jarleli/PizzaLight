@@ -8,7 +8,7 @@ using System.Text;
 
 namespace PizzaLight.Tests
 {
-    [TestFixture]
+    [TestFixture, Category("Integration")]
     public class ConfigFromJsonTests
     {
         [Test]
@@ -23,16 +23,18 @@ namespace PizzaLight.Tests
         public void PizzaRoomHasRoomAndCity()
         {
             var config = GetConfig();
-            Assert.AreEqual("oslo" , config.PizzaRoom.Room);
-            Assert.AreEqual("Oslo" , config.PizzaRoom.City);
+            Assert.AreEqual("bot-team", config.PizzaRoom.Room);
+            Assert.AreEqual("Oslo", config.PizzaRoom.City);
         }
 
-        private static BotConfig GetConfig()
+        public static BotConfig GetConfig()
         {
             var configuration = new ConfigurationBuilder()
                             .AddJsonFile("appsettings.json")
+                            .AddJsonFile(@"c:\temp\pizzalight\data\config\apitoken.json")
                             .Build();
             var config = configuration.GetSection("Bot").Get<BotConfig>();
+            Assert.Greater(config.SlackApiKey.Length, 8);
             return config;
         }
 

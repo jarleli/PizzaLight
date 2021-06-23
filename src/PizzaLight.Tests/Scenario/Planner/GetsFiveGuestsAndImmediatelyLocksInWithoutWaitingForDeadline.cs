@@ -2,10 +2,9 @@
 using System.Linq;
 using System.Threading.Tasks;
 using Moq;
-using Noobot.Core.MessagingPipeline.Request;
-using Noobot.Core.MessagingPipeline.Response;
 using NUnit.Framework;
 using PizzaLight.Models;
+using PizzaLight.Models.SlackModels;
 using PizzaLight.Resources;
 using PizzaLight.Tests.Harness;
 
@@ -27,7 +26,7 @@ namespace PizzaLight.Tests.Scenario.Planner
             _plan = _harness.ActivePizzaPlans.Single();
             foreach (var person in _plan.Invited.ToList())
             {
-                await _harness.Inviter.HandleMessage(new IncomingMessage() { UserId = person.UserId, FullText = "yes" });
+                await _harness.Inviter.HandleMessage(new SlackAPI.WebSocketMessages.NewMessage() { user = person.UserId, text = "yes" });
             }
             _harness.Core.Invocations.Clear();
 
@@ -50,14 +49,14 @@ namespace PizzaLight.Tests.Scenario.Planner
         [Test]
         public void PlanGetsAnnounced()
         {
-            _harness.Core.Verify(c => c.SendMessage(It.Is<ResponseMessage>(
+            _harness.Core.Verify(c => c.SendMessage(It.Is<MessageToSend>(
                 m => m.Text.Contains("will get together and eat some tasty pizza"))), Times.Once);
         }
 
         [Test]
         public void ParticipantsGetInformed()
         {
-            _harness.Core.Verify(c => c.SendMessage(It.Is<ResponseMessage>(
+            _harness.Core.Verify(c => c.SendMessage(It.Is<MessageToSend>(
                 m => m.Text.Contains("This amazing group of people has accepted the invitation for pizza on"))), Times.Exactly(5));
         }
 
@@ -67,7 +66,7 @@ namespace PizzaLight.Tests.Scenario.Planner
         {
             Assert.IsNotNull(_plan.PersonDesignatedToHandleExpenses);
             Assert.IsTrue(_plan.Accepted.Any(a => a.UserId == _plan.PersonDesignatedToHandleExpenses.UserId));
-            _harness.Core.Verify(c => c.SendMessage(It.Is<ResponseMessage>(
+            _harness.Core.Verify(c => c.SendMessage(It.Is<MessageToSend>(
                 m => m.UserId == _plan.PersonDesignatedToHandleExpenses.UserId 
                 && m.Text.Contains("I need someone to help me handle the expenses for the upcoming pizza dinner"))), Times.Once);
         }
@@ -77,7 +76,7 @@ namespace PizzaLight.Tests.Scenario.Planner
         {
             Assert.IsNotNull(_plan.PersonDesignatedToMakeReservation);
             Assert.IsTrue(_plan.Accepted.Any(a => a.UserId == _plan.PersonDesignatedToMakeReservation.UserId));
-            _harness.Core.Verify(c => c.SendMessage(It.Is<ResponseMessage>(
+            _harness.Core.Verify(c => c.SendMessage(It.Is<MessageToSend>(
                 m => m.UserId == _plan.PersonDesignatedToMakeReservation.UserId
                      && m.Text.Contains("I need someone to help me make a reservation at a suitable location"))), Times.Once);
 

@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using Noobot.Core.MessagingPipeline.Response;
 
 namespace PizzaLight.Models
 {

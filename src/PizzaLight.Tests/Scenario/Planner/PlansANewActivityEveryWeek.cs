@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Linq;
 using Moq;
-using Noobot.Core.MessagingPipeline.Response;
 using NUnit.Framework;
 using PizzaLight.Models;
+using PizzaLight.Models.SlackModels;
 using PizzaLight.Resources;
 using PizzaLight.Tests.Harness;
 
@@ -57,7 +57,7 @@ namespace PizzaLight.Tests.Scenario.Planner
         {
             foreach (var invitation in _harness.InvitationList)
             {
-                _harness.Core.Verify(c => c.SendMessage(It.Is<ResponseMessage>(m
+                _harness.Core.Verify(c => c.SendMessage(It.Is<MessageToSend>(m
                     =>
                         m.UserId == invitation.UserId
                         && m.Text.Contains(

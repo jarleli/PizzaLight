@@ -2,12 +2,12 @@
 using System.Linq;
 using System.Threading.Tasks;
 using Moq;
-using Noobot.Core.MessagingPipeline.Request;
-using Noobot.Core.MessagingPipeline.Response;
 using NUnit.Framework;
 using PizzaLight.Models;
+using PizzaLight.Models.SlackModels;
 using PizzaLight.Resources;
 using PizzaLight.Tests.Harness;
+using SlackAPI.WebSocketMessages;
 
 namespace PizzaLight.Tests.Scenario.Planner
 {
@@ -25,7 +25,7 @@ namespace PizzaLight.Tests.Scenario.Planner
 
             _harness.Tick();
             _plan = _harness.ActivePizzaPlans.Single();
-            await _harness.Inviter.HandleMessage(new IncomingMessage() { UserId = _plan.Invited.First().UserId, FullText = "yes" });
+            await _harness.Inviter.HandleMessage(new NewMessage() { user = _plan.Invited.First().UserId, text= "yes" });
 
             _harness.Now = _harness.Now.AddDays(8);
             _harness.Tick();
@@ -48,7 +48,7 @@ namespace PizzaLight.Tests.Scenario.Planner
         public void GuestsThatAcceptedAreNotifiedOfCancellation()
         {
             _harness.Core.Verify(c
-                    => c.SendMessage(It.Is<ResponseMessage>(m
+                    => c.SendMessage(It.Is<MessageToSend>(m
                         => m.Text.Contains("Unfortunately due to lack of interest the *pizza dinner on")))
                 , Times.Exactly(_plan.Accepted.Count));
 

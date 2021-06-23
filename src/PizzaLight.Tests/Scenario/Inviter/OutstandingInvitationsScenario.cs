@@ -1,8 +1,8 @@
 using System;
 using System.Linq;
 using Moq;
-using Noobot.Core.MessagingPipeline.Response;
 using NUnit.Framework;
+using PizzaLight.Models.SlackModels;
 using PizzaLight.Tests.Harness;
 
 namespace PizzaLight.Tests.Scenario.Inviter
@@ -33,13 +33,13 @@ namespace PizzaLight.Tests.Scenario.Inviter
             foreach (var invitation in _harness.InvitationList)
             {
                 _harness.Core.Verify(
-                    c => c.SendMessage(It.Is<ResponseMessage>(m => 
+                    c => c.SendMessage(It.Is<MessageToSend>(m => 
                     m.UserId == invitation.UserId
                     && m.Text.Contains("Do you want to meet up for a social gathering and eat some tasty pizza with other colleagues in")
                     )), Times.Once());
             }
             _harness.Core.Verify(
-                c => c.SendMessage(It.Is<ResponseMessage>(m => _harness.UserCache.Values.Any(u=>u.Id == m.UserId))), Times.Exactly(_harness.Config.InvitesPerEvent));
+                c => c.SendMessage(It.Is<MessageToSend>(m => _harness.UserCache.Any(u=>u.id == m.UserId))), Times.Exactly(_harness.Config.InvitesPerEvent));
 
         }
 

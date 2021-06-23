@@ -8,13 +8,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using Bip39Words;
 using Microsoft.Extensions.Logging;
-using Noobot.Core.MessagingPipeline.Request;
-using Noobot.Core.MessagingPipeline.Response;
 using PizzaLight.Infrastructure;
 using PizzaLight.Models;
 using PizzaLight.Resources.ExtensionClasses;
-using SlackConnector;
-using SlackConnector.Models;
 using ILogger = Serilog.ILogger;
 
 namespace PizzaLight.Resources
@@ -68,7 +64,7 @@ namespace PizzaLight.Resources
                 throw new ConfigurationErrorsException($"Config element cannot be null 'BotRoom'");
 
             var channelName = $"#{_config.PizzaRoom.Room}";
-            if (_core.SlackConnection.ConnectedChannel(channelName) == null)
+            if (_core.Channels.Any(c=>c.name == channelName))
             {
                 //var newHub = await _core.SlackConnection.JoinChannel(_config.PizzaRoom.Room);
                 var message = $"Bot not in channel {_config.PizzaRoom.Room} and bots cannot join rooms on their own. Invite it!";
@@ -144,9 +140,7 @@ namespace PizzaLight.Resources
             }
         }
 
-#pragma warning disable 1998
-        private async Task ScheduleNewEvent( DateTime mondayInWeekToScheduleEvent)
-#pragma warning restore 1998
+        private Task ScheduleNewEvent( DateTime mondayInWeekToScheduleEvent)
         {
             _logger.Debug("Creating new event...");
             
@@ -176,6 +170,8 @@ namespace PizzaLight.Resources
             _activityLog.Log($"Created a new Pizza Plan '{newPlan.Id}' for {inviteList.Count} participants.");
             _activePlans.Add(newPlan);
             _storage.SaveArray(ACTIVEEVENTSFILE, _activePlans.ToArray());
+
+            return Task.CompletedTask;
         }
 
         public List<Person> FindPeopleToInvite(string pizzaRoom, int targetGuestCount, IEnumerable<Person> peopleAlreadyInvitedToPizzaPlan)
@@ -188,16 +184,16 @@ namespace PizzaLight.Resources
             ignoredUsers.AddRange(peopleThatHaveOptedOutOfReceivingInvitations);
 
 
-            var channel = _core.SlackConnection.ConnectedChannel( $"#{pizzaRoom}");
+            var channel = _core.Channels.SingleOrDefault(c => c.name == $"{pizzaRoom}");
             if (channel == null)
             {
                 throw new Exception($"No such room to invite from: '{pizzaRoom}'");
             }
-            var channelMembers = _core.UserCache.Values
-                .Where(u=> channel.Members.Contains(u.Id))
-                .Where(m=> ! m.IsBot)
-                .Where(m=> ! m.Deleted);
-            var inviteCandidates = channelMembers.Where(c => ignoredUsers.All(u => u.UserId != c.Id)).ToList();
+            var channelMembers = _core.UserCache
+                .Where(u=> channel.members.Contains(u.id))
+                .Where(u=> ! u.is_bot)
+                .Where(u=> ! u.deleted);
+            var inviteCandidates = channelMembers.Where(cmm => ignoredUsers.All(u => u.UserId != cmm.id)).ToList();
 
             return inviteCandidates.SelectListOfRandomPeople(targetGuestCount);
         }
@@ -216,9 +212,7 @@ namespace PizzaLight.Resources
             return targetDay.Date.AddHours(17);
         }
 
-#pragma warning disable 1998
-        private async Task HandleInvitationChanged(Invitation invitation)
-#pragma warning restore 1998
+        private Task HandleInvitationChanged(Invitation invitation)
         {
             try
             {
@@ -230,7 +224,9 @@ namespace PizzaLight.Resources
                 var person = pizzaEvent.Invited
                     .SingleOrDefault(i => i.UserName == invitation.UserName && invitation.Response != Invitation.ResponseEnum.NoResponse);
                 if (person == null)
-                {   return;}
+                {
+                    return Task.CompletedTask;
+                }
 
                 if (pizzaEvent.Invited.Contains(person))
                 {
@@ -251,6 +247,7 @@ namespace PizzaLight.Resources
             {
                 _logger.Error(e, "Unable to apply event InvitationChanged");
             }
+            return Task.CompletedTask;
         }
 
 
@@ -305,8 +302,8 @@ namespace PizzaLight.Resources
             PizzaPlan pizzaPlan;
             while((pizzaPlan = _activePlans.FirstOrDefault(p=>p.ParticipantsLocked && p.PersonDesignatedToMakeReservation == null)) != null)
             {
-                var candidates = _core.UserCache.Where(c => pizzaPlan.Accepted.Any(a => a.UserId == c.Key)).Select(c => c.Value).ToList();
-                candidates = candidates.Where(c=>c.Name != pizzaPlan.PersonDesignatedToHandleExpenses?.UserName).ToList();
+                var candidates = _core.UserCache.Where(c => pizzaPlan.Accepted.Any(a => a.UserId == c.id)).ToList();
+                candidates = candidates.Where(c=>c.name != pizzaPlan.PersonDesignatedToHandleExpenses?.UserName).ToList();
                 var guest = candidates.SelectListOfRandomPeople(1).SingleOrDefault();
                 if (guest == null)
                 {
@@ -328,8 +325,8 @@ namespace PizzaLight.Resources
             PizzaPlan pizzaPlan;
             while ((pizzaPlan = _activePlans.FirstOrDefault(p => p.ParticipantsLocked && p.PersonDesignatedToHandleExpenses == null)) != null)
             {
-                var candidates = _core.UserCache.Where(c => pizzaPlan.Accepted.Any(a => a.UserId == c.Key)).Select(c => c.Value).ToList();
-                candidates = candidates.Where(c => c.Name != pizzaPlan.PersonDesignatedToMakeReservation?.UserName).ToList();
+                var candidates = _core.UserCache.Where(c => pizzaPlan.Accepted.Any(a => a.UserId == c.id)).ToList();
+                candidates = candidates.Where(c => c.name != pizzaPlan.PersonDesignatedToMakeReservation?.UserName).ToList();
                 var guest = candidates.SelectListOfRandomPeople(1).SingleOrDefault();
                 if (guest == null)
                 {

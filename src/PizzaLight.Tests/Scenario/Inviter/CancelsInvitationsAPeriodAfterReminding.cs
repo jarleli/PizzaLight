@@ -1,8 +1,8 @@
 using System;
 using System.Linq;
 using Moq;
-using Noobot.Core.MessagingPipeline.Response;
 using NUnit.Framework;
+using PizzaLight.Models.SlackModels;
 using PizzaLight.Tests.Harness;
 
 namespace PizzaLight.Tests.Scenario.Inviter
@@ -37,7 +37,7 @@ namespace PizzaLight.Tests.Scenario.Inviter
         public void InvitaionMessagesWereSent()
         {
             _harness.Core.Verify( c 
-                => c.SendMessage(It.Is<ResponseMessage>(m 
+                => c.SendMessage(It.Is<MessageToSend>(m 
                 => m.Text.Contains("Sadly, you didn't respond to my invitation and I will now invite someone else instead.")))
                     , Times.Exactly(_harness.Config.InvitesPerEvent));
         }

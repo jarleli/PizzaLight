@@ -1,15 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Noobot.Core.MessagingPipeline.Request;
 using PizzaLight.Models;
-using SlackConnector.Models;
+using SlackAPI;
+using SlackAPI.WebSocketMessages;
 
 namespace PizzaLight.Resources.ExtensionClasses
 {
     public static class PersonExtensions
     {
-        public static List<Person> SelectListOfRandomPeople(this List<SlackUser> inviteCandidates, int targetGuestCount)
+        public static List<Person> SelectListOfRandomPeople(this List<User> inviteCandidates, int targetGuestCount)
         {
             var random = new Random();
             var numberOfCandidates = inviteCandidates.Count;
@@ -22,7 +22,7 @@ namespace PizzaLight.Resources.ExtensionClasses
                 var invite = inviteCandidates[randomPick];
                 inviteCandidates.Remove(invite);
                 numberOfCandidates--;
-                list.Add(new Person() { UserName = invite.Name, UserId = invite.Id });
+                list.Add(new Person() { UserName = invite.name, UserId = invite.id });
             }
             return list;
         }
@@ -57,9 +57,9 @@ namespace PizzaLight.Resources.ExtensionClasses
             throw new Exception("");
         }
 
-        public static Person GetSendingUser(this IncomingMessage incomingMessage)
+        public static Person GetSendingUser(this NewMessage incomingMessage)
         {
-            return new Person { UserId = incomingMessage.UserId, UserName = incomingMessage.Username };
+            return new Person { UserId = incomingMessage.user, UserName = incomingMessage.username};
         }
 
 

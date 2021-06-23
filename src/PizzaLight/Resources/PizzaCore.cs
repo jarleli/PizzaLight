@@ -1,15 +1,14 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
-using Noobot.Core.MessagingPipeline.Request;
-using Noobot.Core.MessagingPipeline.Response;
 using PizzaLight.Infrastructure;
+using PizzaLight.Models.SlackModels;
 using PizzaLight.Resources.ExtensionClasses;
 using Serilog;
-using SlackConnector;
-using SlackConnector.Models;
-using StructureMap.TypeRules;
+using SlackAPI;
+using SlackAPI.WebSocketMessages;
 
 namespace PizzaLight.Resources
 {
@@ -19,17 +18,21 @@ namespace PizzaLight.Resources
         private readonly Serilog.ILogger _logger;
         private readonly List<IMessageHandler> _messageHandlers = new List<IMessageHandler>();
         private bool _isDisconnecting = false;
-        /// <summary>
-        /// Can be null if disconnected. Should wait for reconnection.
-        /// </summary>
-        public ISlackConnection SlackConnection { get; private set; }
 
-        public IReadOnlyDictionary<string, SlackUser> UserCache => SlackConnection.UserCache;
+        SlackTaskClient Client { get; set; }
+        private SlackSocketClient SocketClient { get; set; }
+
+        public List<User> UserCache => SocketClient.Users;
+        public List<Channel> Channels => SocketClient.Channels;
+        public bool IsConnected => SocketClient.IsConnected;
 
         public PizzaCore(BotConfig botConfig, ILogger logger)
         {
             _botConfig = botConfig ?? throw new ArgumentNullException(nameof(botConfig));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+
+            Client = new SlackTaskClient(_botConfig.SlackApiKey);
+            SocketClient = new SlackSocketClient(_botConfig.SlackApiKey);
         }
 
         public async Task Start()
@@ -55,15 +58,25 @@ namespace PizzaLight.Resources
 
         private async Task ConnectToSlack()
         {
-            SlackConnection = await new SlackConnector.SlackConnector().Connect(_botConfig.SlackApiKey);
-            SlackConnection.OnMessageReceived += MessageReceived;
-            SlackConnection.OnDisconnect += OnDisconnect;
-            SlackConnection.OnReconnecting += OnReconnecting;
-            SlackConnection.OnReconnect += OnReconnect;
+            await Client.ConnectAsync();
+            _logger.Verbose($"Team Name: {Client.MyTeam.name}");
+            _logger.Verbose($"Bots Name: {Client.MySelf.name}");
 
-            _logger.Information("Connected!");
-            _logger.Verbose($"Team Name: {SlackConnection.Team.Name}");
-            _logger.Verbose($"Bots Name: {SlackConnection.Self.Name}");
+            await ConnectSocket();
+        }
+
+        private async Task ConnectSocket()
+        {
+            var wait = new ManualResetEventSlim();
+            Task t = new Task(()=>
+            {
+                SocketClient.OnMessageReceived += OnMessageReceived;
+                SocketClient.OnConnectionLost += OnDisconnect;
+                SocketClient.OnHello += OnSocketInitialized;
+                _logger.Information("Socket Connected!");
+            });
+            SocketClient.Connect(null, () => { t.Start(); });
+            await t;
         }
 
         public async Task Stop()
@@ -77,7 +90,7 @@ namespace PizzaLight.Resources
             if (messageHandlers == null) throw new ArgumentNullException(nameof(messageHandlers));
             foreach (var handler in messageHandlers)
             {
-                if (_messageHandlers.Any(h => h.GetType().CanBeCastTo(handler.GetType())))
+                if (_messageHandlers.Any(h => h.GetType() == handler.GetType()))
                 {
                     throw new InvalidOperationException($"Handler of type {handler.GetType().Name} already exists in message handlers.");
                 }
@@ -85,30 +98,31 @@ namespace PizzaLight.Resources
             }
         }
 
-        private Task OnReconnect()
+        public void OnMessageReceived(NewMessage message)
         {
-            _logger.Information("SlackConnection Restored!");
-            //_container.GetPlugin<StatsPlugin>().IncrementState("ConnectionsRestored");
-            return Task.CompletedTask;
-        }
+            if(message.bot_id == SocketClient.MySelf.id) { return; }
+            if(!message.IsDirect()) { return; }
+            if( message.IsByBot()) { return; }
 
-        private Task OnReconnecting()
-        {
-            _logger.Information("Attempting to reconnect to Slack...");
-            //_container.GetPlugin<StatsPlugin>().IncrementState("Reconnecting");
-            return Task.CompletedTask;
-        }
+            message.username = UserCache.SingleOrDefault(u => u.id == message.user).name ?? "[BLANK]";
+            _logger.Information("[Message found from '{FromUser}/{FromUserName}']", message.user, message.username);
+            _logger.Debug($"MSG: {message.text.SafeSubstring(0, 90)}");
 
-        private async Task Disconnect()
-        {
-            _isDisconnecting = true;
-
-            if (SlackConnection != null && SlackConnection.IsConnected)
+            bool messageUnderstood = false;
+            foreach (var resource in _messageHandlers)
             {
-                await SlackConnection.Close();
+                if (resource.HandleMessage(message).Result)
+                {
+                    messageUnderstood = true;
+                }
+            }
+            if (messageUnderstood == false)
+            {
+                SendMessage(message.CreateResponseMessage(
+                    $"I'm sorry, I didn't catch that. If you have any further questions please direct them to #{_botConfig.BotRoom}."))
+                    .Wait(5000);
             }
         }
-
         private void OnDisconnect()
         {
             if (_isDisconnecting)
@@ -122,18 +136,36 @@ namespace PizzaLight.Resources
             }
         }
 
+        private void OnSocketInitialized()
+        {
+            _logger.Information("Socket initialized.");
+        }
+     
+
+        private Task Disconnect()
+        {
+            _isDisconnecting = true;
+
+            if (SocketClient != null && SocketClient.IsConnected)
+            {
+                SocketClient.CloseSocket();
+            }
+            return Task.CompletedTask;
+        }
+      
+
         internal void Reconnect()
         {
             _logger.Information("Reconnecting...");
-            if (SlackConnection != null)
+            if (SocketClient != null)
             {
-                SlackConnection.OnMessageReceived -= MessageReceived;
-                SlackConnection.OnDisconnect -= OnDisconnect;
-                SlackConnection = null;
+                SocketClient.OnMessageReceived -= OnMessageReceived;
+                SocketClient.OnConnectionLost -= OnDisconnect;
+                SocketClient.OnHello -= OnSocketInitialized;
             }
 
             _isDisconnecting = false;
-            ConnectToSlack()
+            ConnectSocket()
                 .ContinueWith(task =>
                 {
                     if (task.IsCompleted && !task.IsCanceled && !task.IsFaulted)
@@ -148,136 +180,58 @@ namespace PizzaLight.Resources
                 .Wait();
         }
 
-        public async Task MessageReceived(SlackMessage message)
-        {
-            if (message.ChatHub.Type != SlackChatHubType.DM)
-            {
-                return;
-            }
+      
 
-            _logger.Information("[Message found from '{FromUserName}']", message.User.Name);
-            _logger.Debug($"MSG: {message.Text.SafeSubstring(0, 90)}");
 
-            var incomingMessage = new IncomingMessage
-            {
-                RawText = message.Text,
-                FullText = message.Text,
-                UserId = message.User.Id,
-                Username = GetUsername(message),
-                UserEmail = message.User.Email,
-                Channel = message.ChatHub.Id,
-                ChannelType = message.ChatHub.Type == SlackChatHubType.DM ? ResponseType.DirectMessage : ResponseType.Channel,
-                UserChannel = await GetUserChannel(message),
-                BotName = SlackConnection.Self.Name,
-                BotId = SlackConnection.Self.Id,
-                BotIsMentioned = message.MentionsBot
-            };
-            incomingMessage.TargetedText = incomingMessage.GetTargetedText();
-
-            bool messageUnderstood = false;
-            foreach (var resource in _messageHandlers)
-            {
-                if (await resource.HandleMessage(incomingMessage))
-                {
-                    messageUnderstood = true;
-                }
-            }
-            if (messageUnderstood == false)
-            {
-                await SendMessage(incomingMessage.ReplyDirectlyToUser(
-                    $"I'm sorry, I didn't catch that. If you have any further questions please direct them to #{_botConfig.BotRoom}."));
-            }
-        }
-
-        public async Task SendMessage(ResponseMessage responseMessage)
+        public async Task SendMessage(MessageToSend message)
         {
             if (_isDisconnecting)
             {
                 _logger.Warning("Trying to send message while disconnecting.");
             }
-
-            SlackChatHub chatHub = await GetChatHub(responseMessage);
-
-            if (chatHub != null)
-            {
-                if (responseMessage is TypingIndicatorMessage)
-                {
-                    _logger.Information($"Indicating typing on channel '{chatHub.Name}'");
-                    await SlackConnection.IndicateTyping(chatHub);
-                }
-                else
-                {
-                    var botMessage = new BotMessage
-                    {
-                        ChatHub = chatHub,
-                        Text = responseMessage.Text,
-                    };
-
-                    _logger.Information($"Sending message '{botMessage.Text.SafeSubstring(0,90)}'");
-                    await SlackConnection.Say(botMessage);
-                }
-            }
-            else
-            {
-                _logger.Error($"Unable to send message '{responseMessage.Text}'.");
-            }
+            var channelId = await GetChannelId(message);
+            var res = await Client.PostMessageAsync(channelId, message.Text, "Automa Luce Della Pizza (PizzaLight Bot)");
         }
 
-        private string GetUsername(SlackMessage message)
+        private async Task<string> GetChannelId(MessageToSend message)
         {
-            return UserCache.ContainsKey(message.User.Id) ? UserCache[message.User.Id].Name : string.Empty;
-        }
-        private async Task<string> GetUserChannel(SlackMessage message)
-        {
-            return (await GetUserChatHub(message.User.Id, joinChannel: false) ?? new SlackChatHub()).Id;
-        }
-
-        private async Task<SlackChatHub> GetChatHub(ResponseMessage responseMessage)
-        {
-            SlackChatHub chatHub = null;
-
-            if (responseMessage.ResponseType == ResponseType.Channel)
+            if (!string.IsNullOrEmpty(message.ChannelId)) return message.ChannelId;
+            if (!string.IsNullOrEmpty(message.ChannelName))
             {
-                chatHub = new SlackChatHub { Id = responseMessage.Channel };
-            }
-            else if (responseMessage.ResponseType == ResponseType.DirectMessage)
-            {
-                var user = SlackConnection.UserCache[responseMessage.UserId];
-                if (user.Deleted)
-                {
-                    _logger.Warning("User {UsernName} is deactivated. Will skip sending message");
-                    return null;
-                }
+                //could open channel if not available, but thats outside the scope of this bot for now, so we'll let it fail
+                var channel = Client.Channels.Single(c => c.name == message.ChannelName);
+                if (channel != null) return channel.id;
+            };
+            var dmchannel = Client.DirectMessages.SingleOrDefault(dm => dm.user == message.UserId);
+            if (dmchannel != null) return dmchannel.id;
 
-                if (string.IsNullOrEmpty(responseMessage.Channel))
-                {
-                    chatHub = await GetUserChatHub(responseMessage.UserId);
-                }
-                else
-                {
-                    chatHub = new SlackChatHub { Id = responseMessage.Channel };
-                }
-            }
-
-            return chatHub;
+            var res = await OpenUserConversation(message.UserId);
+            //skulle gjerne ha oppdatert  dm-cache her, men har ikke enkel tilgang på objektet
+            return res.id;
         }
 
-        private async Task<SlackChatHub> GetUserChatHub(string userId, bool joinChannel = true)
+        private async Task<Conversation> GetConversation(MessageToSend message)
         {
-            SlackChatHub chatHub = null;
-
-            if (UserCache.ContainsKey(userId))
+            if (!string.IsNullOrEmpty(message.ChannelId) && Client.DirectMessageLookup.ContainsKey(message.ChannelId))
             {
-                string username = "@" + UserCache[userId].Name;
-                chatHub = SlackConnection.ConnectedDMs().FirstOrDefault(x => x.Name.Equals(username, StringComparison.OrdinalIgnoreCase));
+                return Client.DirectMessageLookup[message.ChannelId];
             }
-
-            if (chatHub == null && joinChannel)
+            if(Client.DirectMessages.Any(dm=>dm.user == message.UserId))
             {
-                chatHub = await SlackConnection.JoinDirectMessageChannel(userId);
+                return Client.DirectMessages.Single(dm => dm.user == message.UserId);
             }
+            return await OpenUserConversation(message.UserId);
+            //skulle gjerne ha oppdatert  dm-cache her, men har ikke enkel tilgang på objektet
+        }
 
-            return chatHub;
+        public async Task<Conversation> OpenUserConversation(string userId)
+        {
+            var res=  await Client.APIRequestWithTokenAsync<JoinDirectMessageChannelResponse>(
+                new Tuple<string, string>("users", userId),
+                new Tuple<string, string>("return_im", "true")
+                );
+            res.AssertOk();
+            return res.channel;
         }
 
 
@@ -285,10 +239,11 @@ namespace PizzaLight.Resources
 
     public interface IPizzaCore
     {
-        ISlackConnection SlackConnection { get; }
-        IReadOnlyDictionary<string, SlackUser> UserCache { get; }
-        Task MessageReceived(SlackMessage message);
-        Task SendMessage(ResponseMessage responseMessage);
+        List<User> UserCache { get; }
+        List<Channel> Channels { get; }
+        bool IsConnected { get; }
+
+        Task SendMessage(MessageToSend responseMessage);
         Task Start();
         Task Stop();
         void AddMessageHandlerToPipeline(params IMessageHandler[] messageHandlers);

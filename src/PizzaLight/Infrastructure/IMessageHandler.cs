@@ -1,10 +1,10 @@
 ﻿using System.Threading.Tasks;
-using Noobot.Core.MessagingPipeline.Request;
+using SlackAPI.WebSocketMessages;
 
 namespace PizzaLight.Infrastructure
 {
     public interface IMessageHandler
     {
-        Task<bool> HandleMessage(IncomingMessage incomingMessage);
+        Task<bool> HandleMessage(NewMessage incomingMessage);
     }
 }

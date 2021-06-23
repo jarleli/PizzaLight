@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Linq;
 using Moq;
-using Noobot.Core.MessagingPipeline.Response;
 using NUnit.Framework;
 using PizzaLight.Models;
+using PizzaLight.Models.SlackModels;
 using PizzaLight.Resources;
 using PizzaLight.Tests.Harness;
 
@@ -39,7 +39,7 @@ namespace PizzaLight.Tests.Scenario.Planner
             Assert.AreEqual(5, _harness.InvitationList.Length);
 
             _harness.Core.Verify(c => c.SendMessage(
-                    It.Is<ResponseMessage>(m 
+                    It.Is<MessageToSend>(m 
                         => m.Text.Contains("Do you want to meet up for a social gathering and eat some tasty pizza ")
                         && _harness.InvitationList.Any(i=>i.UserId == m.UserId)
                     )),Times.Exactly(5));

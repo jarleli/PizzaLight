@@ -9,8 +9,7 @@ using PizzaLight.Infrastructure;
 using PizzaLight.Models;
 using PizzaLight.Resources;
 using Serilog;
-using SlackConnector;
-using SlackConnector.Models;
+using SlackAPI;
 
 namespace PizzaLight.Tests.Harness
 {
@@ -24,9 +23,8 @@ namespace PizzaLight.Tests.Harness
 
         public Mock<ILogger> Logger;
         public BotConfig Config;
-        public Mock<ISlackConnection> Connection;
         public Mock<IOptOutState> OptOutState;
-        public ConcurrentDictionary<string, SlackUser> UserCache;
+        public List<User> UserCache;
         public Mock<IActivityLog> Activity;
         public Func<DateTimeOffset> FuncNow { get; set; }
         public DateTimeOffset Now { get; set; } = new DateTimeOffset(2019, 06, 01, 12, 00, 00, 00, TimeSpan.Zero);
@@ -69,8 +67,8 @@ namespace PizzaLight.Tests.Harness
             Logger = new Mock<ILogger>();
             Activity = new Mock<IActivityLog>();
             OptOutState = new Mock<IOptOutState>();
-            Connection = new Mock<ISlackConnection>();
-            Core.SetupGet(c => c.SlackConnection).Returns(Connection.Object);
+            //Connection = new Mock<SlackSocketClient>();
+            //Core.SetupGet(c => c.SocketClient).Returns(Connection.Object);
 
             OptOut = new OptOutHandler(Logger.Object, Config, OptOutState.Object, Core.Object, Activity.Object, FuncNow);
             Inviter = new PizzaInviter(Logger.Object, Config,Storage.Object, Core.Object, Activity.Object , FuncNow);
@@ -91,20 +89,21 @@ namespace PizzaLight.Tests.Harness
 
         public TestHarness AddChannels()
         {
-            var hubs = new ConcurrentDictionary<string, SlackChatHub>();
-            var members = UserCache.Select(u => u.Value.Id).ToArray();
-            hubs.TryAdd(Config.PizzaRoom.Room, new SlackChatHub() { Id = "123", Name = "#" + Config.PizzaRoom.Room, Members = members , Type = SlackChatHubType.Channel });
-            Connection.SetupGet(c => c.ConnectedHubs).Returns(hubs);
+            var channels = new List<Channel>();
+            var members = UserCache.Select(u => u.id).ToArray();
+            channels.Add( new Channel() { id = "C123", name = Config.PizzaRoom.Room, members = members});
+
+            Core.SetupGet(c => c.Channels).Returns(channels);
 
             return this;
         }
 
         public TestHarness WithTenUsersInCache()
         {
-            UserCache = new ConcurrentDictionary<string, SlackUser>();
+            UserCache = new List< User>();
             for (int i = 0; i < 10; i++)
             {
-                UserCache.TryAdd($"id{i}", new SlackUser() { Name = $"user{i}", Id = $"id{i}" });
+                UserCache.Add(new User() { name = $"user{i}", id = $"id{i}" });
 
             }
             Core.Setup(c => c.UserCache).Returns(UserCache);
@@ -168,7 +167,7 @@ namespace PizzaLight.Tests.Harness
 
         public TestHarness WithFiveUnsentInvitations()
         {
-            var invitations = Connection.Object.ConnectedHubs.Single().Value.Members
+            var invitations = Core.Object.Channels.Single().members
                 .Take(Config.InvitesPerEvent)
                 .Select(m => new Invitation() {EventId = "a b c", Room = Config.PizzaRoom.Room, UserId = m});
             Inviter.Invite(invitations);

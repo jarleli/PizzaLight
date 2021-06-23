@@ -1,5 +1,5 @@
-﻿using Noobot.Core.MessagingPipeline.Response;
-using PizzaLight.Infrastructure;
+﻿using PizzaLight.Infrastructure;
+using PizzaLight.Models.SlackModels;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -32,25 +32,24 @@ namespace PizzaLight.Resources
                 _activity.Log("Tried to announce opt out feature, but announcement is disabled");
                 return;
 
-                var channels = new[] { _config.BotRoom, _config.PizzaRoom.Room };
-                foreach (var channel in channels)
-                {
-                    var message = new ResponseMessage()
-                    {
-                        Channel = channel,
-                        ResponseType = ResponseType.Channel,
-                        Text = "Apparenly not everyone loves pizza as much as me. It appears not everyone here actually has the time or the ability to meet up for pizza with great friends.\n" +
-                        "That is a great shame, but if that is you then I have just the thing. Starting now I have the ability to remember those that don't want to, or can't make it to our fabulous pizza dates. \n" +
-                        "Try messaging me with the command `opt out` and I'll get you sorted and you won't have to be bothered by me again.\n" +
-                        $"For everyone else: *more pizza for us!*\n" +
-                        $"And if you have complaints or comments, I'm hanging out in #{_config.BotRoom}, so feel free to join me there."
-                    };
-                    await _core.SendMessage(message);
-                    _activity.Log($"Announced feature:OptOut! in {channel}");
-                }
-                state.OptOutFeatureAnnounced = DateTimeOffset.UtcNow;
+                //var channels = new[] { _config.BotRoom, _config.PizzaRoom.Room };
+                //foreach (var channel in channels)
+                //{
+                //    var message = new MessageToSend()
+                //    {
+                //        ChannelName = channel,
+                //        Text = "Apparenly not everyone loves pizza as much as me. It appears not everyone here actually has the time or the ability to meet up for pizza with great friends.\n" +
+                //        "That is a great shame, but if that is you then I have just the thing. Starting now I have the ability to remember those that don't want to, or can't make it to our fabulous pizza dates. \n" +
+                //        "Try messaging me with the command `opt out` and I'll get you sorted and you won't have to be bothered by me again.\n" +
+                //        $"For everyone else: *more pizza for us!*\n" +
+                //        $"And if you have complaints or comments, I'm hanging out in #{_config.BotRoom}, so feel free to join me there."
+                //    };
+                //    await _core.SendMessage(message);
+                //    _activity.Log($"Announced feature:OptOut! in {channel}");
+                //}
+                //state.OptOutFeatureAnnounced = DateTimeOffset.UtcNow;
 
-                _storage.SaveObject(STATEFILENAME, state);
+                //_storage.SaveObject(STATEFILENAME, state);
             }
 
         }

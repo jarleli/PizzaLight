@@ -5,12 +5,11 @@ using System.Dynamic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Noobot.Core.MessagingPipeline.Request;
 using PizzaLight.Infrastructure;
 using PizzaLight.Models;
 using PizzaLight.Resources.ExtensionClasses;
 using Serilog;
-using SlackConnector.Models;
+using SlackAPI.WebSocketMessages;
 
 namespace PizzaLight.Resources
 {
@@ -146,50 +145,50 @@ namespace PizzaLight.Resources
         }
 
 
-        public async Task<bool> HandleMessage(IncomingMessage incomingMessage)
+        public async Task<bool> HandleMessage(NewMessage incomingMessage)
         {
-            var existingInvitation = _activeInvitations.FirstOrDefault(inv => incomingMessage.UserId == inv.UserId);
+            var existingInvitation = _activeInvitations.FirstOrDefault(inv => incomingMessage.user == inv.UserId);
             if (existingInvitation?.Response == Invitation.ResponseEnum.NoResponse)
             {
-                if(new[] { "yes", "Yes", "YES", "Yes.", "Yes!"}.Contains(incomingMessage.FullText))
+                if(incomingMessage.text.StartsWith("yes", StringComparison.InvariantCultureIgnoreCase))
                 {
                     await AcceptInvitation(incomingMessage);
                     return true;
                 }
-                else if (new[] {"no", "No", "NO", "No.", "No!"}.Contains(incomingMessage.FullText))
+                if (incomingMessage.text.StartsWith("no", StringComparison.InvariantCultureIgnoreCase))
                 {
                     await RejectInvitation(incomingMessage);
                     return true;
                 }
                 else
                 {
-                    await _core.SendMessage(incomingMessage.ReplyDirectlyToUser("I'm sorry, I didn't catch that. Did you mean to accept the pizza invitation? Please reply `yes` or `no`."));
+                    await _core.SendMessage(incomingMessage.CreateResponseMessage("I'm sorry, I didn't catch that. Did you mean to accept the pizza invitation? Please reply `yes` or `no`."));
                     return true;
                 }
             }
             return false;
         }
 
-        private async Task AcceptInvitation(IncomingMessage incomingMessage)
+        private async Task AcceptInvitation(NewMessage incomingMessage)
         {
-            var reply = incomingMessage.ReplyDirectlyToUser("Thank you. I will keep you informed when the other guests have accepted!");
+            var reply = incomingMessage.CreateResponseMessage("Thank you. I will keep you informed when the other guests have accepted!");
             await _core.SendMessage(reply);
 
-            var invitation = _activeInvitations.Single(i => i.UserId == incomingMessage.UserId);
+            var invitation = _activeInvitations.Single(i => i.UserId == incomingMessage.user);
             invitation.Response = Invitation.ResponseEnum.Accepted;
-            _activityLog.Log($"User {incomingMessage.Username} ACCEPTED the invitation for event '{invitation.EventId}'");
+            _activityLog.Log($"User {incomingMessage.username} ACCEPTED the invitation for event '{invitation.EventId}'");
             await RaiseOnInvitationChanged(invitation);
 
             _activeInvitations.Remove(invitation);
             _storage.SaveArray(INVITESFILE, _activeInvitations.ToArray());
         }
 
-        private async Task RejectInvitation(IncomingMessage incomingMessage)
+        private async Task RejectInvitation(NewMessage incomingMessage)
         {
-            var invitation = _activeInvitations.Single(i => i.UserId == incomingMessage.UserId);
+            var invitation = _activeInvitations.Single(i => i.UserId == incomingMessage.user);
             invitation.Response= Invitation.ResponseEnum.Rejected;
             _activeInvitations.Remove(invitation);
-            _activityLog.Log($"User {incomingMessage.Username} REJECTED the invitation for event '{invitation.EventId}'");
+            _activityLog.Log($"User {incomingMessage.username} REJECTED the invitation for event '{invitation.EventId}'");
             await RaiseOnInvitationChanged(invitation);
 
             _activeInvitations.Remove(invitation);

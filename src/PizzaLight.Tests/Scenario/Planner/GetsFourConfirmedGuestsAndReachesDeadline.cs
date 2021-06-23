@@ -2,12 +2,12 @@
 using System.Linq;
 using System.Threading.Tasks;
 using Moq;
-using Noobot.Core.MessagingPipeline.Request;
-using Noobot.Core.MessagingPipeline.Response;
 using NUnit.Framework;
 using PizzaLight.Models;
+using PizzaLight.Models.SlackModels;
 using PizzaLight.Resources;
 using PizzaLight.Tests.Harness;
+using SlackAPI.WebSocketMessages;
 
 namespace PizzaLight.Tests.Scenario.Planner
 {
@@ -27,7 +27,7 @@ namespace PizzaLight.Tests.Scenario.Planner
             _plan = _harness.ActivePizzaPlans.Single();
             foreach (var person in _plan.Invited.Take(4).ToList())
             {
-                await _harness.Inviter.HandleMessage(new IncomingMessage() { UserId = person.UserId, FullText = "yes" });
+                await _harness.Inviter.HandleMessage(new NewMessage() { user = person.UserId, text = "yes" });
             }
             _harness.Tick();
             Assert.IsNull(_plan.Cancelled);
@@ -53,14 +53,14 @@ namespace PizzaLight.Tests.Scenario.Planner
         [Test]
         public void PlanGetsAnnounced()
         {
-            _harness.Core.Verify(c=>c.SendMessage(It.Is<ResponseMessage>(
+            _harness.Core.Verify(c=>c.SendMessage(It.Is<MessageToSend>(
                 m=> m.Text.Contains("will get together and eat some tasty pizza"))), Times.Once);
         }
 
         [Test]
         public void ParticipantsGetInformed()
         {
-            _harness.Core.Verify(c=>c.SendMessage(It.Is<ResponseMessage>(
+            _harness.Core.Verify(c=>c.SendMessage(It.Is<MessageToSend>(
                 m=> m.Text.Contains("This amazing group of people has accepted the invitation for pizza on"))), Times.Exactly(4));
         }
 

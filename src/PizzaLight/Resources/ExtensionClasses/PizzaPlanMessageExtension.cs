@@ -1,13 +1,13 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
-using Noobot.Core.MessagingPipeline.Response;
 using PizzaLight.Models;
+using PizzaLight.Models.SlackModels;
 
 namespace PizzaLight.Resources.ExtensionClasses
 {
     public static class PizzaPlanMessageExtension
     {
-        public static IEnumerable<ResponseMessage> CreateParticipantsLockedResponseMessage(this PizzaPlan pizzaPlan)
+        public static IEnumerable<MessageToSend> CreateParticipantsLockedResponseMessage(this PizzaPlan pizzaPlan)
         {
             foreach (var person in pizzaPlan.Accepted)
             {
@@ -20,9 +20,8 @@ namespace PizzaLight.Resources.ExtensionClasses
                            $"{participantlist} \n" +
                            $"If you don't know them all yet, now is an excellent opportunity. Please be mindful of local recommendations, stay safe and have a fantastic time!";
 
-                var message = new ResponseMessage()
+                var message = new MessageToSend()
                 {
-                    ResponseType = ResponseType.DirectMessage,
                     UserId = person.UserId,
                     Text = text,
                 };
@@ -30,7 +29,7 @@ namespace PizzaLight.Resources.ExtensionClasses
             }
         }
 
-        public static ResponseMessage CreatePizzaRoomAnnouncementMessage(this PizzaPlan pizzaPlan, string botRoom)
+        public static MessageToSend CreatePizzaRoomAnnouncementMessage(this PizzaPlan pizzaPlan, string botRoom)
         {
             var day = pizzaPlan.TimeOfEvent.LocalDateTime.ToString("dddd, MMMM dd");
             var time = pizzaPlan.TimeOfEvent.LocalDateTime.ToString("HH:mm");
@@ -44,12 +43,17 @@ namespace PizzaLight.Resources.ExtensionClasses
                        $"" +
                        $"I want to remind you all to be mindful of local recommendations during these times and please stay at home if you are showing any symptoms.";
 
-            var message = ResponseMessage.ChannelMessage(botRoom, text, (Attachment) null, null);
+            var message = new MessageToSend()
+            {
+                ChannelName = botRoom,
+                Text = text
+            };
+
             
             return message;
         }
 
-        public static ResponseMessage CreateNewDesignateToMakeReservationMessage(this PizzaPlan pizzaPlan, string botRoom)
+        public static MessageToSend CreateNewDesignateToMakeReservationMessage(this PizzaPlan pizzaPlan, string botRoom)
         {
             var day = pizzaPlan.TimeOfEvent.LocalDateTime.ToString("dddd, MMMM dd");
             var time = pizzaPlan.TimeOfEvent.LocalDateTime.ToString("HH:mm");
@@ -61,15 +65,14 @@ namespace PizzaLight.Resources.ExtensionClasses
                        $"Someone else has been chosen to pay for the event and expense it, all you have to do is to make a reservation. \n" +
                        $"Also remember to inform or invite the other participants once you have made the reservation. The other participants are {participantlist} \n" +
                        $"Thank you!";
-            return new ResponseMessage()
+            return new MessageToSend()
             {
-                ResponseType = ResponseType.DirectMessage,
                 UserId = pizzaPlan.PersonDesignatedToMakeReservation.UserId,
                 Text = text
             };
         }
 
-        public static ResponseMessage CreateNewDesignateToHandleExpensesMessage(this PizzaPlan pizzaPlan, string botRoom)
+        public static MessageToSend CreateNewDesignateToHandleExpensesMessage(this PizzaPlan pizzaPlan, string botRoom)
         {
             var day = pizzaPlan.TimeOfEvent.LocalDateTime.ToString("dddd, MMMM dd");
             var time = pizzaPlan.TimeOfEvent.LocalDateTime.ToString("HH:mm");
@@ -81,15 +84,14 @@ namespace PizzaLight.Resources.ExtensionClasses
                        $"If you have any questions please ask someone else in your group or head over to #{botRoom} .\n" +
                        $"The participants are {participantlist} \n" +
                        $"Thank you!";
-            return new ResponseMessage()
+            return new MessageToSend()
             {
-                ResponseType = ResponseType.DirectMessage,
                 UserId = pizzaPlan.PersonDesignatedToHandleExpenses.UserId,
                 Text = text
             };
         }
 
-        public static IEnumerable<ResponseMessage> CreateNewEventIsCancelledMessage(this PizzaPlan pizzaPlan)
+        public static IEnumerable<MessageToSend> CreateNewEventIsCancelledMessage(this PizzaPlan pizzaPlan)
         {
             var day = pizzaPlan.TimeOfEvent.LocalDateTime.ToString("dddd, MMMM dd");
             var time = pizzaPlan.TimeOfEvent.LocalDateTime.ToString("HH:mm");
@@ -99,16 +101,15 @@ namespace PizzaLight.Resources.ExtensionClasses
                 var text = $"Hello again @{person.UserName}. \n" +
                            $"Unfortunately due to lack of interest the *pizza dinner on {day} at {time} will have to be cancelled.* \n " +
                            $"I'll make sure to invite you to another dinner at another time.";
-                yield return new ResponseMessage()
+                yield return new MessageToSend()
                 {
-                    ResponseType = ResponseType.DirectMessage,
                     UserId = person.UserId,
                     Text = text
                 };
             }
         }
 
-        public static  IEnumerable<ResponseMessage> CreateRemindParticipantsOfEvent(this PizzaPlan pizzaPlan)
+        public static  IEnumerable<MessageToSend> CreateRemindParticipantsOfEvent(this PizzaPlan pizzaPlan)
         {
             var day = pizzaPlan.TimeOfEvent.LocalDateTime.ToString("dddd, MMMM dd");
             var time = pizzaPlan.TimeOfEvent.LocalDateTime.ToString("HH:mm");
@@ -119,9 +120,8 @@ namespace PizzaLight.Resources.ExtensionClasses
                 var text = $"Hello again @{person.UserName}. \n" +
                            $"I'm sending you this message to remind you that you have an upcoming *pizza dinner on {day} at {time}* together with {participantlist} \n ";
                            
-                yield return new ResponseMessage()
+                yield return new MessageToSend()
                 {
-                    ResponseType = ResponseType.DirectMessage,
                     UserId = person.UserId,
                     Text = text
                 };
