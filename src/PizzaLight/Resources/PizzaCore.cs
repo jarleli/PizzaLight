@@ -16,6 +16,7 @@ namespace PizzaLight.Resources
     {
         private readonly BotConfig _botConfig;
         private readonly Serilog.ILogger _logger;
+        private readonly IActivityLog _activityLog;
         private readonly List<IMessageHandler> _messageHandlers = new List<IMessageHandler>();
         private bool _isDisconnecting = false;
 
@@ -30,7 +31,6 @@ namespace PizzaLight.Resources
         {
             _botConfig = botConfig ?? throw new ArgumentNullException(nameof(botConfig));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-
             Client = new SlackTaskClient(_botConfig.SlackApiKey);
             SocketClient = new SlackSocketClient(_botConfig.SlackApiKey);
         }
@@ -100,27 +100,35 @@ namespace PizzaLight.Resources
 
         public void OnMessageReceived(NewMessage message)
         {
-            if(message.bot_id == SocketClient.MySelf.id) { return; }
-            if(!message.IsDirect()) { return; }
-            if( message.IsByBot()) { return; }
-
-            message.username = UserCache.SingleOrDefault(u => u.id == message.user).name ?? "[BLANK]";
-            _logger.Information("[Message found from '{FromUser}/{FromUserName}']", message.user, message.username);
-            _logger.Debug($"MSG: {message.text.SafeSubstring(0, 90)}");
-
-            bool messageUnderstood = false;
-            foreach (var resource in _messageHandlers)
+            try
             {
-                if (resource.HandleMessage(message).Result)
+                if(message.bot_id == SocketClient.MySelf.id) { return; }
+                if(!message.IsDirect()) { return; }
+                if( message.IsByBot()) { return; }
+
+                message.username = UserCache.SingleOrDefault(u => u.id == message.user).name ?? "[BLANK]";
+                _logger.Information("[Message found from '{FromUser}/{FromUserName}']", message.user, message.username);
+                _logger.Debug($"MSG: {message.text.SafeSubstring(0, 90)}");
+
+                bool messageUnderstood = false;
+                foreach (var resource in _messageHandlers)
                 {
-                    messageUnderstood = true;
+                    if (resource.HandleMessage(message).Result)
+                    {
+                        messageUnderstood = true;
+                    }
+                }
+                if (messageUnderstood == false)
+                {
+                    SendMessage(message.CreateResponseMessage(
+                        $"I'm sorry, I didn't catch that. If you have any further questions please direct them to #{_botConfig.BotRoom}."))
+                        .Wait(5000);
                 }
             }
-            if (messageUnderstood == false)
+            catch (Exception e)
             {
-                SendMessage(message.CreateResponseMessage(
-                    $"I'm sorry, I didn't catch that. If you have any further questions please direct them to #{_botConfig.BotRoom}."))
-                    .Wait(5000);
+                _logger.Error(e, "Failure handling incoming message from '{FromUser}/{FromUserName}'. [MSG: {UserMessage}]", message.user, message.username, message.text.SafeSubstring(0, 90));
+                Environment.FailFast($"Failure handling incoming message from '{message.user}/{message.username}'. [MSG: {message.text.SafeSubstring(0, 90)}]", e);
             }
         }
         private void OnDisconnect()

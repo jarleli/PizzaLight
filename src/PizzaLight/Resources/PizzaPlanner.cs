@@ -22,6 +22,8 @@ namespace PizzaLight.Resources
         public const string OLDEVENTSFILE = "oldplans";
         public const int DAYSBEFOREEVENTTOCANCEL = 5;
         public const int HOURSBEFORETOREMIND = 47;
+        private const int MINIMUMPARTICIPANTS = 4;
+
         // ReSharper restore InconsistentNaming
 
         private readonly IActivityLog _activityLog;
@@ -116,7 +118,7 @@ namespace PizzaLight.Resources
             var plansOverDeadline = _activePlans.Where(p => _funcNow().AddDays(DAYSBEFOREEVENTTOCANCEL) > p.TimeOfEvent).ToList();
             while ((pizzaPlan = plansOverDeadline.FirstOrDefault(p => !p.ParticipantsLocked && !p.Cancelled.HasValue)) != null)
             {
-                if (pizzaPlan.Accepted.Count < 4)
+                if (pizzaPlan.Accepted.Count < MINIMUMPARTICIPANTS)
                 {
                     await CancelPizzaPlan(pizzaPlan);
                 }
