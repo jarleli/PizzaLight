@@ -35,7 +35,7 @@ namespace PizzaLight.Tests.Unit
         }
 
         [Test]
-        public async Task GetDayOfNextEvent_ReturnsSomeWeekDayInTheFuture()
+        public void GetDayOfNextEvent_ReturnsSomeWeekDayInTheFuture()
         {
             var dateTime =  _harness.Planner.GetTimeOfNextEvent(_harness.FuncNow().AddDays(7).Date);
             Assert.That(dateTime.DayOfWeek != DayOfWeek.Saturday);

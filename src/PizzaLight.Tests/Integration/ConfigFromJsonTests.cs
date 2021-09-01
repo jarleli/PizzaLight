@@ -23,7 +23,7 @@ namespace PizzaLight.Tests
         public void PizzaRoomHasRoomAndCity()
         {
             var config = GetConfig();
-            Assert.AreEqual("bot-team", config.PizzaRoom.Room);
+            Assert.AreEqual("oslo", config.PizzaRoom.Room);
             Assert.AreEqual("Oslo", config.PizzaRoom.City);
         }
 

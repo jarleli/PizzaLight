@@ -94,7 +94,7 @@ namespace PizzaLight.Tests.Harness
             channels.Add( new Channel() { id = "C123", name = Config.PizzaRoom.Room, members = members});
 
             Core.SetupGet(c => c.Channels).Returns(channels);
-
+            Core.Setup(c => c.ChannelMembers(Config.PizzaRoom.Room)).Returns(Task.FromResult( members.ToList()));
             return this;
         }
 
