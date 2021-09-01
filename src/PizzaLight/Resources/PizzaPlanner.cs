@@ -99,6 +99,7 @@ namespace PizzaLight.Resources
             {
                 _activityLog.Log($"ERROR: {e.Message}");
                 _logger.Fatal(e, "Exception running 'PizzaPlannerLoopTick'");
+                Environment.Exit(-1);
             }
         }
 
@@ -190,6 +191,10 @@ namespace PizzaLight.Resources
             if (channel == null)
             {
                 throw new Exception($"No such room to invite from: '{pizzaRoom}'");
+            }
+            if(!channel.members.Any())
+            {
+                throw new Exception($"No listed members in channel '{channel.name}'");
             }
             var channelMembers = _core.UserCache
                 .Where(u=> channel.members.Contains(u.id))
