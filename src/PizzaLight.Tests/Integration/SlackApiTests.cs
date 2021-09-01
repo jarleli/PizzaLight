@@ -23,6 +23,19 @@ namespace PizzaLight.Tests
             var res = await core.OpenUserConversation(user.id);
         }
 
+
+        [Test]
+        public async Task CheckChannelMembers()
+        {
+            var config = ConfigFromJsonTests.GetConfig();
+            var core = new PizzaCore(config, new Mock<Serilog.ILogger>().Object);
+            await core.Start();
+            var channel = core.Channels.Single(c => c.name == config.PizzaRoom.Room);
+
+            var members = await core.ChannelMembers(config.PizzaRoom.Room);
+            Assert.IsNotEmpty(members);
+        }
+
         [Test]
         public async Task CanSendHello()
         {

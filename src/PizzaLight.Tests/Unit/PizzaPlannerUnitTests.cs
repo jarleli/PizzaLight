@@ -24,10 +24,10 @@ namespace PizzaLight.Tests.Unit
         }
 
         [Test]
-        public void GetPeopleToInviteReturnsRightNumberOfPeople()
+        public async Task GetPeopleToInviteReturnsRightNumberOfPeople()
         {
             var cache = _harness.UserCache;
-            var result = _harness.Planner.FindPeopleToInvite(_harness.Config.PizzaRoom.Room, 2, new List<Person>());
+            var result = await _harness.Planner.FindPeopleToInvite(_harness.Config.PizzaRoom.Room, 2, new List<Person>());
             Assert.That(result.Count == 2,"result.Count == 2");
             Assert.That(cache.Any(u=>u.name == result[0].UserName));
             Assert.That(cache.Any(u=>u.name == result[1].UserName));
@@ -35,9 +35,9 @@ namespace PizzaLight.Tests.Unit
         }
 
         [Test]
-        public void GetDayOfNextEvent_ReturnsSomeWeekDayInTheFuture()
+        public async Task GetDayOfNextEvent_ReturnsSomeWeekDayInTheFuture()
         {
-            var dateTime = _harness.Planner.GetTimeOfNextEvent(_harness.FuncNow().AddDays(7).Date);
+            var dateTime =  _harness.Planner.GetTimeOfNextEvent(_harness.FuncNow().AddDays(7).Date);
             Assert.That(dateTime.DayOfWeek != DayOfWeek.Saturday);
             Assert.That(dateTime.DayOfWeek != DayOfWeek.Sunday);
             Assert.That(dateTime> _harness.FuncNow());

@@ -143,13 +143,13 @@ namespace PizzaLight.Resources
             }
         }
 
-        private Task ScheduleNewEvent( DateTime mondayInWeekToScheduleEvent)
+        private async Task ScheduleNewEvent( DateTime mondayInWeekToScheduleEvent)
         {
             _logger.Debug("Creating new event...");
             
             var eventId = WordGenerator.GetRandomWordString(3);
             var timeOfEvent = GetTimeOfNextEvent(mondayInWeekToScheduleEvent);
-            var toInvite = FindPeopleToInvite(_config.PizzaRoom.Room, _config.InvitesPerEvent, new List<Person>());
+            var toInvite = await FindPeopleToInvite(_config.PizzaRoom.Room, _config.InvitesPerEvent, new List<Person>());
 
             var newPlan = new PizzaPlan()
             {
@@ -173,11 +173,9 @@ namespace PizzaLight.Resources
             _activityLog.Log($"Created a new Pizza Plan '{newPlan.Id}' for {inviteList.Count} participants.");
             _activePlans.Add(newPlan);
             _storage.SaveArray(ACTIVEEVENTSFILE, _activePlans.ToArray());
-
-            return Task.CompletedTask;
         }
 
-        public List<Person> FindPeopleToInvite(string pizzaRoom, int targetGuestCount, IEnumerable<Person> peopleAlreadyInvitedToPizzaPlan)
+        public async Task<List<Person>> FindPeopleToInvite(string pizzaRoom, int targetGuestCount, IEnumerable<Person> peopleAlreadyInvitedToPizzaPlan)
         {
             var ignoredUsers = peopleAlreadyInvitedToPizzaPlan.ToList();
             var peopleWithOutstandingInvitations = _pizzaInviter.OutstandingInvites.Select(i => new Person() { UserName = i.UserName, UserId = i.UserId });
@@ -192,15 +190,12 @@ namespace PizzaLight.Resources
             {
                 throw new Exception($"No such room to invite from: '{pizzaRoom}'");
             }
-            if(!channel.members.Any())
-            {
-                throw new Exception($"No listed members in channel '{channel.name}'");
-            }
-            var channelMembers = _core.UserCache
-                .Where(u=> channel.members.Contains(u.id))
+            var channelMembers = await _core.ChannelMembers(pizzaRoom);
+            var candidates = _core.UserCache
+                .Where(u=> channelMembers.Contains(u.id))
                 .Where(u=> ! u.is_bot)
                 .Where(u=> ! u.deleted);
-            var inviteCandidates = channelMembers.Where(cmm => ignoredUsers.All(u => u.UserId != cmm.id)).ToList();
+            var inviteCandidates = candidates.Where(cmm => ignoredUsers.All(u => u.UserId != cmm.id)).ToList();
 
             return inviteCandidates.SelectListOfRandomPeople(targetGuestCount);
         }
@@ -267,7 +262,7 @@ namespace PizzaLight.Resources
             {
                 var ignoreUsers = pizzaPlan.Rejected.ToList();
                 ignoreUsers.AddRange(pizzaPlan.Accepted);
-                var newInvites = FindPeopleToInvite(_config.PizzaRoom.Room, _config.InvitesPerEvent-totalInvited, ignoreUsers);
+                var newInvites = await FindPeopleToInvite(_config.PizzaRoom.Room, _config.InvitesPerEvent-totalInvited, ignoreUsers);
                 if (!newInvites.Any())
                 {
                     _logger.Information("Found no more eligible users to invite to event '{EventId}'.", pizzaPlan.Id);

@@ -24,6 +24,7 @@ namespace PizzaLight.Resources
         private SlackSocketClient SocketClient { get; set; }
 
         public List<User> UserCache => SocketClient.Users;
+        
         public List<Channel> Channels => SocketClient.Channels;
         public bool IsConnected => SocketClient.IsConnected;
 
@@ -75,7 +76,14 @@ namespace PizzaLight.Resources
                 SocketClient.OnHello += OnSocketInitialized;
                 _logger.Information("Socket Connected!");
             });
-            SocketClient.Connect(null, () => { t.Start(); });
+            LoginResponse response; 
+            SocketClient.Connect(details =>
+                { 
+                    _logger.Information("Basic connection achieved.");
+                    response = details;
+                }, 
+                () => { t.Start(); }) ;
+
             await t;
         }
 
@@ -242,6 +250,20 @@ namespace PizzaLight.Resources
             return res.channel;
         }
 
+        public async Task<List<string>> ChannelMembers(string channelName) 
+        {
+            var channel = this.Channels.Single(c => c.name == channelName);
+            var channelId = channel.id;
+            var res = await Client.APIRequestWithTokenAsync<ConversationMembers>(
+                new Tuple<string, string>("channel", channelId),
+                new Tuple<string, string>("limit", "800")
+                );
+            res.AssertOk();
+
+            return res.members.ToList();
+
+        }
+
 
     }
 
@@ -255,6 +277,8 @@ namespace PizzaLight.Resources
         Task Start();
         Task Stop();
         void AddMessageHandlerToPipeline(params IMessageHandler[] messageHandlers);
+        Task<List<string>> ChannelMembers(string channelName);
+
     }
 
 }
