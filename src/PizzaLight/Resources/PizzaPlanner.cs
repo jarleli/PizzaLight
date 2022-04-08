@@ -200,8 +200,7 @@ namespace PizzaLight.Resources
         public DateTimeOffset GetTimeOfNextEvent(DateTime dateInWeekToScheduleEvent)
         {
             //Day of week for event
-            var random = new Random();
-            var dayOfWeekToHoldEvent = random.Next(2, 5); //tuesday through thursday
+            var dayOfWeekToHoldEvent = Random.Shared.Next(2, 5); //tuesday through thursday
 
             var targetDay = dateInWeekToScheduleEvent
                 .AddDays(-(int) dateInWeekToScheduleEvent.DayOfWeek)
