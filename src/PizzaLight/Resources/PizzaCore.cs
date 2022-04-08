@@ -22,8 +22,8 @@ namespace PizzaLight.Resources
         SlackTaskClient Client { get; set; }
         private SlackSocketClient SocketClient { get; set; }
 
-        public List<User> UserCache => SocketClient.Users;
-        
+        public List<User> UserCache { get; private set; }
+
         public List<Channel> Channels => SocketClient.Channels;
         public bool IsConnected => SocketClient.IsConnected;
 
@@ -68,20 +68,21 @@ namespace PizzaLight.Resources
         private async Task ConnectSocket()
         {
             var wait = new ManualResetEventSlim();
-            Task t = new Task(()=>
+            Task t = new Task(() =>
             {
                 SocketClient.OnMessageReceived += OnMessageReceived;
                 SocketClient.OnConnectionLost += OnDisconnect;
                 SocketClient.OnHello += OnSocketInitialized;
                 _logger.Information("Socket Connected!");
             });
-            LoginResponse response; 
+            LoginResponse response;
             SocketClient.Connect(details =>
-                { 
+                {
                     _logger.Information("Basic connection achieved.");
                     response = details;
-                }, 
-                () => { t.Start(); }) ;
+                    UserCache = SocketClient.Users;
+                },
+                () => { t.Start(); });
 
             await t;
         }
@@ -109,9 +110,9 @@ namespace PizzaLight.Resources
         {
             try
             {
-                if(message.bot_id == SocketClient.MySelf.id) { return; }
-                if(!message.IsDirect()) { return; }
-                if( message.IsByBot()) { return; }
+                if (message.bot_id == SocketClient.MySelf.id) { return; }
+                if (!message.IsDirect()) { return; }
+                if (message.IsByBot()) { return; }
 
                 message.username = UserCache.SingleOrDefault(u => u.id == message.user).name ?? "[BLANK]";
                 _logger.Information("[Message found from '{FromUser}/{FromUserName}']", message.user, message.username);
@@ -155,7 +156,6 @@ namespace PizzaLight.Resources
         {
             _logger.Information("Socket initialized.");
         }
-     
 
         private Task Disconnect()
         {
@@ -167,7 +167,6 @@ namespace PizzaLight.Resources
             }
             return Task.CompletedTask;
         }
-      
 
         internal void Reconnect()
         {
@@ -194,9 +193,6 @@ namespace PizzaLight.Resources
                 })
                 .Wait();
         }
-
-      
-
 
         public async Task SendMessage(MessageToSend message)
         {
@@ -231,7 +227,7 @@ namespace PizzaLight.Resources
             {
                 return Client.DirectMessageLookup[message.ChannelId];
             }
-            if(Client.DirectMessages.Any(dm=>dm.user == message.UserId))
+            if (Client.DirectMessages.Any(dm => dm.user == message.UserId))
             {
                 return Client.DirectMessages.Single(dm => dm.user == message.UserId);
             }
@@ -241,7 +237,7 @@ namespace PizzaLight.Resources
 
         public async Task<Conversation> OpenUserConversation(string userId)
         {
-            var res=  await Client.APIRequestWithTokenAsync<JoinDirectMessageChannelResponse>(
+            var res = await Client.APIRequestWithTokenAsync<JoinDirectMessageChannelResponse>(
                 new Tuple<string, string>("users", userId),
                 new Tuple<string, string>("return_im", "true")
                 );
@@ -249,7 +245,7 @@ namespace PizzaLight.Resources
             return res.channel;
         }
 
-        public async Task<List<string>> ChannelMembers(string channelName) 
+        public async Task<List<string>> ChannelMembers(string channelName)
         {
             var channel = this.Channels.Single(c => c.name == channelName);
             var channelId = channel.id;
@@ -260,10 +256,37 @@ namespace PizzaLight.Resources
             res.AssertOk();
 
             return res.members.ToList();
-
         }
 
+        public async Task UpdateUserCache()
+        {
+            var waitSemaphore = new SemaphoreSlim(1);
+            string apiErrorReason = null;
 
+            SocketClient.GetUserList(callback =>
+            {
+                if (callback.ok)
+                {
+                    UserCache = callback.members.ToList();
+                }
+                else
+                {
+                    apiErrorReason = callback.error;
+                }
+
+                waitSemaphore.Release();
+            });
+
+            if (!await waitSemaphore.WaitAsync(TimeSpan.FromSeconds(30)))
+            {
+                throw new Exception("Timed out updating the user list");
+            }
+
+            if (!string.IsNullOrEmpty(apiErrorReason))
+            {
+                throw new Exception($"Unable to get the user list: {apiErrorReason}");
+            }
+        }
     }
 
     public interface IPizzaCore
@@ -271,13 +294,11 @@ namespace PizzaLight.Resources
         List<User> UserCache { get; }
         List<Channel> Channels { get; }
         bool IsConnected { get; }
-
         Task SendMessage(MessageToSend responseMessage);
         Task Start();
         Task Stop();
         void AddMessageHandlerToPipeline(params IMessageHandler[] messageHandlers);
         Task<List<string>> ChannelMembers(string channelName);
-
+        Task UpdateUserCache();
     }
-
 }
