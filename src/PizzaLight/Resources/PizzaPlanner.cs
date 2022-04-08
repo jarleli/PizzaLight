@@ -83,6 +83,7 @@ namespace PizzaLight.Resources
         {
             try
             {
+                await _core.UpdateUserCache();
                 await ClosePizzaPlanAfterFinished();
                 await LockInPizzaPlansOrCancelOnesThatPassDeadline();
                 await NominatePersonToMakeReservation();
