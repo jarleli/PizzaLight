@@ -115,7 +115,6 @@ namespace PizzaLight.Infrastructure
             { throw new NotStartedException("Storage not properly started with Start()"); }
             return Path.Combine(_directory, fileName + ".json");
         }
-
     }
 
     public interface IFileStorage : IMustBeInitialized
@@ -125,7 +124,5 @@ namespace PizzaLight.Infrastructure
         void SaveArray<T>(string fileName, T[] objects) where T : class, new();
         T ReadObject<T>(string fileName) where T : class, new();
         void SaveObject<T>(string fileName, T objects) where T : class, new();
-
     }
-
 }

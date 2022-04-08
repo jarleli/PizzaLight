@@ -1,7 +1,6 @@
 ﻿using System;
 using Microsoft.AspNetCore.Mvc;
 using PizzaLight.Infrastructure;
-using PizzaLight.Resources;
 
 namespace PizzaLight.Controllers
 {
@@ -12,7 +11,6 @@ namespace PizzaLight.Controllers
         public ActivityController(IActivityLog log)
         {
             _log = log ?? throw new ArgumentNullException(nameof(log));
-
         }
 
         [Route("activity")]
@@ -24,6 +22,5 @@ namespace PizzaLight.Controllers
                 _log.Activities
             });
         }
-
     }
 }

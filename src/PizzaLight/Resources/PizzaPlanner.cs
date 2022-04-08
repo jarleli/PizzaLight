@@ -1,16 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Configuration;
-using System.Diagnostics;
-using System.Globalization;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
-using Bip39Words;
-using Microsoft.Extensions.Logging;
+﻿using Bip39Words;
 using PizzaLight.Infrastructure;
 using PizzaLight.Models;
 using PizzaLight.Resources.ExtensionClasses;
+using System;
+using System.Collections.Generic;
+using System.Configuration;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using ILogger = Serilog.ILogger;
 
 namespace PizzaLight.Resources
@@ -288,8 +285,6 @@ namespace PizzaLight.Resources
             }
         }
 
-    
-
         private async Task HandlePlansWithMissingInvitations()
         {
             foreach (PizzaPlan plan in _activePlans.Where(p => p.Accepted.Count + p.Invited.Count < 5))
@@ -344,6 +339,7 @@ namespace PizzaLight.Resources
                 await _core.SendMessage(message);
             }
         }
+
         private async Task AnnouncePizzaPlanInPizzaRoom()
         {
             PizzaPlan pizzaPlan;
@@ -433,7 +429,5 @@ namespace PizzaLight.Resources
             oldPlans.Add(plan);
             _storage.SaveArray(OLDEVENTSFILE, oldPlans.ToArray());;
         }
-
     }
-
 }
