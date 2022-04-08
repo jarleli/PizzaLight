@@ -16,7 +16,6 @@ namespace PizzaLight.Resources
     {
         private readonly BotConfig _botConfig;
         private readonly Serilog.ILogger _logger;
-        private readonly IActivityLog _activityLog;
         private readonly List<IMessageHandler> _messageHandlers = new List<IMessageHandler>();
         private bool _isDisconnecting = false;
 

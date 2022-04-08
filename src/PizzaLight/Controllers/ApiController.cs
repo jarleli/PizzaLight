@@ -7,7 +7,7 @@ namespace PizzaLight.Controllers
 {
     [Route("")]
     [Route("api")]
-    public class ApiController: Controller
+    public class ApiController : Controller
     {
         private readonly IPizzaCore _core;
         private readonly PizzaPlanner _planner;
