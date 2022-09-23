@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using Moq;
@@ -68,6 +69,26 @@ namespace PizzaLight.Tests.Unit
 
             Assert.That(!_harness.ActivePizzaPlans.Any());
             Assert.That(_harness.OldPizzaPlans.Length == 1);
+        }
+
+        [Test]
+        public void ScheduledOnANotPublicHoliday()
+        {
+            const string notHoliday = "23-09-2022";
+            var aHoliday = DateTime.ParseExact(notHoliday, "dd-MM-yyyy", CultureInfo.CurrentCulture);
+            var retVal = _harness.Planner.IsScheduledDateIsAHoliday(aHoliday);
+
+            Assert.AreEqual(false,retVal);
+        }
+        
+        [Test]
+        public void ScheduledOnAPublicHoliday()
+        {
+            const string holiday = "17-05-2022";
+            var aHoliday = DateTime.ParseExact(holiday, "dd-MM-yyyy", CultureInfo.CurrentCulture);
+            var retVal = _harness.Planner.IsScheduledDateIsAHoliday(aHoliday);
+            
+            Assert.AreEqual(true, retVal);
         }
 
         [Test]
