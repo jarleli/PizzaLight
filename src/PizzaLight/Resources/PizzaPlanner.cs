@@ -134,11 +134,32 @@ namespace PizzaLight.Resources
             var thisWeeksMonday = today.AddDays( - (int)today.DayOfWeek + 1);
             thisWeeksMonday = today.DayOfWeek == DayOfWeek.Sunday ? thisWeeksMonday.AddDays(-7) : thisWeeksMonday;
             var mondayInWeekAfterNext = thisWeeksMonday.AddDays(14);
-            
-            if (!_activePlans.Any(p => p.TimeOfEvent > mondayInWeekAfterNext && p.TimeOfEvent < mondayInWeekAfterNext.AddDays(7)))
+
+            if (!IsScheduledDateIsAHoliday(mondayInWeekAfterNext, _config.NorwegianHolidays))
             {
-                await ScheduleNewEvent(mondayInWeekAfterNext);
+                if (!_activePlans.Any(p => p.TimeOfEvent > mondayInWeekAfterNext && p.TimeOfEvent < mondayInWeekAfterNext.AddDays(7)))
+                {
+                    await ScheduleNewEvent(mondayInWeekAfterNext);
+                }
             }
+        }
+
+        public static bool IsScheduledDateIsAHoliday(DateTime potentialNextEvent, string holidaysList)
+        {
+            var isAHoliday = false;
+
+            var allDatesSplit = holidaysList.Split(";").ToList();
+            var potentialDateVal = $"{potentialNextEvent.Day}-{potentialNextEvent.Month}";
+
+            allDatesSplit.ForEach(i =>
+            {
+                if (i == potentialDateVal)
+                {
+                    isAHoliday = true;
+                }
+            });
+
+            return isAHoliday;
         }
 
         private async Task ScheduleNewEvent( DateTime mondayInWeekToScheduleEvent)

@@ -6,6 +6,7 @@
         public PizzaRoom PizzaRoom { get; set; }
         public int InvitesPerEvent { get; set; }
         public string BotRoom { get; set; }
+        public string NorwegianHolidays { get; set; }
     }
 
     public class PizzaRoom

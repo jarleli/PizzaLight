@@ -4,7 +4,6 @@ PizzaLight is your friendly neighborhood Pizza event organizer. Inviting your fr
 ## About
  - Runs in the channel specified in config. 
  - Periodically invites random members to a pizza date and handles invitations and reminders.
- - 
 
 ## How To Run
 Clone from git and build docker image

@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using Moq;
 using NUnit.Framework;
+using PizzaLight.Infrastructure;
 using PizzaLight.Models;
 using PizzaLight.Models.SlackModels;
 using PizzaLight.Resources;
@@ -15,11 +17,13 @@ namespace PizzaLight.Tests.Unit
     public class PizzaPlannerUnitTests
     {
         private TestHarness _harness;
-
+        private BotConfig _config;
+        
         [SetUp]
         public void Setup()
         {
             _harness = TestHarness.CreateHarness();
+            _config = new BotConfig { NorwegianHolidays = "1-1;1-5;17-5;22-12;23-12;24-12;25-12;26-12;27-12;28-12;29-12;30-12;31-12" };
             _harness.Start();
         }
 
@@ -68,6 +72,28 @@ namespace PizzaLight.Tests.Unit
 
             Assert.That(!_harness.ActivePizzaPlans.Any());
             Assert.That(_harness.OldPizzaPlans.Length == 1);
+        }
+
+        [Test]
+        public void ScheduledOnANotPublicHoliday()
+        {
+            const string notHoliday = "23-09-2022";
+            var aHoliday = DateTime.ParseExact(notHoliday, "dd-MM-yyyy", CultureInfo.CurrentCulture);
+
+            var retVal = PizzaPlanner.IsScheduledDateIsAHoliday(aHoliday, _config.NorwegianHolidays);
+
+            Assert.AreEqual(false, retVal);
+        }
+
+        [Test]
+        public void ScheduledOnAPublicHoliday()
+        {
+            const string holiday = "17-05-2022";
+            var aHoliday = DateTime.ParseExact(holiday, "dd-MM-yyyy", CultureInfo.CurrentCulture);
+
+            var retVal = PizzaPlanner.IsScheduledDateIsAHoliday(aHoliday, _config.NorwegianHolidays);
+
+            Assert.AreEqual(true, retVal);
         }
 
         [Test]
